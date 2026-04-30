@@ -1,0 +1,54 @@
+:root {
+  /* Paleta principal */
+  --color-primary:       #1a5f9e;
+  --color-primary-light: #e8f2fb;
+  --color-primary-mid:   #b5d4f4;
+  --color-success:       #2d8a4e;
+  --color-success-light: #eaf5ee;
+  --color-danger:        #c0392b;
+  --color-danger-light:  #fdf0ef;
+  --color-warning:       #e67e22;
+  --color-warning-light: #fef5ec;
+
+  /* Neutros */
+  --color-bg:            #f7f8fa;
+  --color-surface:       #ffffff;
+  --color-border:        #e2e5ea;
+  --color-text:          #1a1d23;
+  --color-text-secondary:#6b7280;
+  --color-text-disabled: #b0b7c0;
+
+  /* Tipografía — accesible para adultos mayores */
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-body:    'DM Sans', system-ui, sans-serif;
+
+  /* Tamaños mínimos de fuente (accesibilidad) */
+  --text-action:  1.125rem;   /* 18px — mínimo para elementos interactivos */
+  --text-body:    1rem;       /* 16px */
+  --text-label:   0.875rem;   /* 14px */
+  --text-caption: 0.75rem;    /* 12px */
+
+  /* Toque mínimo accesible */
+  --touch-min: 56px;          /* mínimo WCAG 2.5.5 */
+
+  /* Layout */
+  --radius:    14px;
+  --radius-sm: 8px;
+  --shadow:    0 2px 12px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.12);
+
+  /* Breakpoints como variables para JS */
+  --bp-mobile: 480px;
+  --bp-tablet: 768px;
+}
+
+/* Reset y base */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  min-height: 100vh;
+}

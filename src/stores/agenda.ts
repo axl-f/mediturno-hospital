@@ -1,0 +1,178 @@
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import { db } from '../firebase'
+import { ref as dbRef, get, update, push, onValue } from 'firebase/database'
+
+export interface Especialidad {
+  id: string
+  nombre: string
+  icono: string
+  color?: string
+}
+
+export interface Cita {
+  id: string
+  pacienteRut: string
+  pacienteNombre: string
+  especialidad: string
+  fecha: string
+  hora: string
+  estado: 'confirmada' | 'pendiente' | 'cancelada' | 'asistio' | 'no_asistio'
+}
+
+export interface PacienteEspera {
+  id?: string
+  rut: string
+  nombre: string
+  timestamp: number
+  notificado?: boolean
+}
+
+export const useAgendaStore = defineStore('agenda', () => {
+  const especialidades = ref<Especialidad[]>([])
+  const disponibilidad = ref<Record<string, Record<string, string[]>>>({})
+  const citasDelDia = ref<Cita[]>([])
+  const listaEspera = ref<Record<string, PacienteEspera[]>>({})
+  const cargando = ref(false)
+
+  async function cargarEspecialidades() {
+    cargando.value = true
+    try {
+      const snap = await get(dbRef(db, 'especialidades'))
+      if (snap.exists()) {
+        const data = snap.val()
+        especialidades.value = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }))
+      }
+    } finally {
+      cargando.value = false
+    }
+  }
+
+  async function cargarDisponibilidad(especialidad: string, fecha: string) {
+    cargando.value = true
+    try {
+      const snap = await get(dbRef(db, `agenda/${especialidad}/${fecha}`))
+      if (snap.exists()) {
+        const data = snap.val()
+        if (!disponibilidad.value[especialidad]) disponibilidad.value[especialidad] = {}
+        const horasLibres = Object.keys(data).filter(h => data[h] === null)
+        disponibilidad.value[especialidad][fecha] = horasLibres
+      } else {
+        if (!disponibilidad.value[especialidad]) disponibilidad.value[especialidad] = {}
+        disponibilidad.value[especialidad][fecha] = []
+      }
+    } finally {
+      cargando.value = false
+    }
+  }
+
+  async function crearCita(datos: Omit<Cita, 'id' | 'estado'>) {
+    cargando.value = true
+    try {
+      const citasRef = dbRef(db, 'citas')
+      const nuevaCitaRef = push(citasRef)
+      const cita: Cita = {
+        id: nuevaCitaRef.key as string,
+        ...datos,
+        estado: 'confirmada'
+      }
+
+      // Transacción o multi-update
+      const updates: any = {}
+      updates[`citas/${cita.id}`] = cita
+      updates[`agenda/${cita.especialidad}/${cita.fecha}/${cita.hora}`] = cita.id
+
+      await update(dbRef(db), updates)
+      return cita.id
+    } finally {
+      cargando.value = false
+    }
+  }
+
+  async function cancelarCita(citaId: string, cita: Cita) {
+    const updates: any = {}
+    updates[`citas/${citaId}/estado`] = 'cancelada'
+    updates[`agenda/${cita.especialidad}/${cita.fecha}/${cita.hora}`] = null
+    await update(dbRef(db), updates)
+    // Acá iría la lógica para activar lista de espera
+  }
+
+  function suscribirCitasDelDia(fecha: string) {
+    const citasRef = dbRef(db, 'citas')
+    onValue(citasRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val()
+        citasDelDia.value = Object.keys(data)
+          .map(k => data[k])
+          .filter(c => c.fecha === fecha)
+      } else {
+        citasDelDia.value = []
+      }
+    })
+  }
+
+  async function agregarListaEspera(especialidad: string, paciente: PacienteEspera) {
+    const listaRef = dbRef(db, `listaEspera/${especialidad}/queue`)
+    await push(listaRef, paciente)
+  }
+
+  function suscribirListaEspera() {
+    const listRef = dbRef(db, 'listaEspera')
+    onValue(listRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val()
+        const nuevaLista: Record<string, PacienteEspera[]> = {}
+        Object.keys(data).forEach(esp => {
+          if (data[esp].queue) {
+            nuevaLista[esp] = Object.keys(data[esp].queue).map(k => ({
+              id: k,
+              ...data[esp].queue[k]
+            }))
+          } else {
+            nuevaLista[esp] = []
+          }
+        })
+        listaEspera.value = nuevaLista
+      } else {
+        listaEspera.value = {}
+      }
+    })
+  }
+
+  async function unirseListaEspera(especialidad: string, rut: string, nombre: string) {
+    const queueRef = dbRef(db, `listaEspera/${especialidad}/queue`)
+    const nuevoPaciente = {
+      rut,
+      nombre,
+      timestamp: Date.now(),
+      notificado: false
+    }
+    await push(queueRef, nuevoPaciente)
+  }
+
+  async function removerDeListaEspera(especialidad: string, id: string) {
+    await update(dbRef(db), {
+      [`listaEspera/${especialidad}/queue/${id}`]: null
+    })
+  }
+
+  return {
+    especialidades,
+    disponibilidad,
+    citasDelDia,
+    listaEspera,
+    cargando,
+    cargarEspecialidades,
+    cargarDisponibilidad,
+    crearCita,
+    cancelarCita,
+    suscribirCitasDelDia,
+    suscribirListaEspera,
+    unirseListaEspera,
+    removerDeListaEspera,
+    agregarListaEspera
+  }
+})

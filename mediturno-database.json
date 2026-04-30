@@ -1,0 +1,91 @@
+{
+  "pacientes": {
+    "12345678": {
+      "nombre": "Carmen González López",
+      "telefono": "+56912345678",
+      "edad": 72,
+      "grupo": "adulto_mayor"
+    },
+    "11222333": {
+      "nombre": "Roberto Sánchez Díaz",
+      "telefono": "+56987654321",
+      "edad": 54,
+      "grupo": "cronico"
+    },
+    "15000000": {
+      "nombre": "Ana Torres Muñoz",
+      "telefono": "+56999000111",
+      "edad": 34,
+      "grupo": "general"
+    }
+  },
+  "admins": {
+    "admin1": {
+      "nombre": "María Pérez",
+      "password": "admin123"
+    }
+  },
+  "medicos": {
+    "medico1": {
+      "nombre": "Dr. Jorge Alvarado",
+      "especialidad": "medicina_general",
+      "password": "medico123"
+    }
+  },
+  "especialidades": {
+    "medicina_general": {
+      "nombre": "Medicina General",
+      "icono": "🩺"
+    },
+    "traumatologia": {
+      "nombre": "Traumatología",
+      "icono": "🦴"
+    },
+    "oftalmologia": {
+      "nombre": "Oftalmología",
+      "icono": "👁️"
+    },
+    "neurologia": {
+      "nombre": "Neurología",
+      "icono": "🧠"
+    },
+    "cardiologia": {
+      "nombre": "Cardiología",
+      "icono": "🫀"
+    },
+    "pediatria": {
+      "nombre": "Pediatría",
+      "icono": "👶"
+    }
+  },
+  "agenda": {
+    "medicina_general": {
+      "2026-05-05": {
+        "08:30": null,
+        "09:00": null,
+        "09:30": null,
+        "10:00": null,
+        "10:30": null,
+        "11:00": null
+      },
+      "2026-05-07": {
+        "08:30": null,
+        "09:00": null,
+        "14:00": null,
+        "14:30": null
+      }
+    },
+    "traumatologia": {
+      "2026-05-06": {
+        "09:00": null,
+        "09:30": null,
+        "10:00": null
+      }
+    }
+  },
+  "listaEspera": {
+    "medicina_general": {
+      "queue": ""
+    }
+  }
+}
