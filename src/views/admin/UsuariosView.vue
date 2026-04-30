@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useAdminStore, Paciente, Medico } from '../../stores/admin'
+import { ref, onMounted } from 'vue'
+import { useAdminStore } from '../../stores/admin'
+import type { Paciente, Medico } from '../../stores/admin'
 import { useAgendaStore } from '../../stores/agenda'
 import AppNav from '../../components/layout/AppNav.vue'
 import BigButton from '../../components/shared/BigButton.vue'
@@ -103,20 +104,35 @@ const eliminar = async (id: string) => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in (tabActual === 'pacientes' ? admin.pacientes : admin.medicos)" :key="tabActual === 'pacientes' ? item.rut : item.user">
-              <td>{{ tabActual === 'pacientes' ? item.rut : item.user }}</td>
-              <td>{{ item.nombre }}</td>
-              <td v-if="tabActual === 'medicos'">
-                {{ agenda.especialidades.find(e => e.id === item.especialidad)?.nombre || item.especialidad }}
-              </td>
-              <td class="actions-cell">
-                <button class="icon-btn edit" @click="abrirModalEditar(item)" aria-label="Editar">✏️</button>
-                <button class="icon-btn delete" @click="eliminar(tabActual === 'pacientes' ? item.rut : item.user)" aria-label="Eliminar">🗑️</button>
-              </td>
-            </tr>
-            <tr v-if="(tabActual === 'pacientes' ? admin.pacientes : admin.medicos).length === 0">
-              <td colspan="4" class="empty-state">No hay registros</td>
-            </tr>
+            <template v-if="tabActual === 'pacientes'">
+              <tr v-for="item in admin.pacientes" :key="item.rut">
+                <td>{{ item.rut }}</td>
+                <td>{{ item.nombre }}</td>
+                <td class="actions-cell">
+                  <button class="icon-btn edit" @click="abrirModalEditar(item)" aria-label="Editar">✏️</button>
+                  <button class="icon-btn delete" @click="eliminar(item.rut)" aria-label="Eliminar">🗑️</button>
+                </td>
+              </tr>
+              <tr v-if="admin.pacientes.length === 0">
+                <td colspan="3" class="empty-state">No hay pacientes registrados</td>
+              </tr>
+            </template>
+            <template v-else>
+              <tr v-for="item in admin.medicos" :key="item.user">
+                <td>{{ item.user }}</td>
+                <td>{{ item.nombre }}</td>
+                <td>
+                  {{ agenda.especialidades.find(e => e.id === item.especialidad)?.nombre || item.especialidad }}
+                </td>
+                <td class="actions-cell">
+                  <button class="icon-btn edit" @click="abrirModalEditar(item)" aria-label="Editar">✏️</button>
+                  <button class="icon-btn delete" @click="eliminar(item.user)" aria-label="Eliminar">🗑️</button>
+                </td>
+              </tr>
+              <tr v-if="admin.medicos.length === 0">
+                <td colspan="4" class="empty-state">No hay médicos registrados</td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
