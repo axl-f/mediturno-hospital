@@ -101,16 +101,10 @@ const unirseListaEspera = async () => {
       </div>
 
       <div v-else class="empty-state">
-        <p>No hay horas disponibles para esta fecha.</p>
-        <div class="waitlist-action">
-          <BigButton 
-            v-if="!anotando"
-            label="Anotarme en Lista de Espera" 
-            variant="primary" 
-            @click="unirseListaEspera"
-          />
-          <LoadingSpinner v-else color="var(--color-primary)" />
-        </div>
+        <p>No hay horarios disponibles para esta fecha o la agenda ya se llenó.</p>
+        <p class="waitlist-msg">Si lo desea, puede ingresar a la lista de espera y le notificaremos si se libera un cupo.</p>
+        <BigButton label="Unirme a la lista de espera" variant="secondary" @click="unirseListaEspera" :disabled="anotando" />
+        <p v-if="anotando" class="loading-msg">Anotando...</p>
       </div>
 
       <div class="bottom-actions" v-if="horasDisponibles.length > 0">
@@ -166,6 +160,21 @@ const unirseListaEspera = async () => {
 .capitalize {
   text-transform: capitalize;
 }
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+.empty-state p { font-size: 1.125rem; margin: 0; }
+.waitlist-msg { color: var(--color-text-secondary); font-size: 1rem !important; max-width: 400px; }
+.loading-msg { margin-top: 1rem; color: var(--color-primary); font-weight: bold; }
 
 .horarios-list {
   display: flex;

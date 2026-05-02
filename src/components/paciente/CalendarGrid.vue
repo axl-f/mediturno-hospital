@@ -35,10 +35,12 @@ const diasMes = computed(() => {
     const d = new Date(props.year, props.month - 1, i)
     const dateStr = `${props.year}-${String(props.month).padStart(2, '0')}-${String(i).padStart(2, '0')}`
     
+    const isBusiness = d.getDay() !== 0 && d.getDay() !== 6
     days.push({
       dateStr,
       num: i,
       isPast: d < today,
+      isBusiness,
       isAvailable: props.diasDisponibles.includes(dateStr)
     })
   }
@@ -49,7 +51,7 @@ const diasMes = computed(() => {
 const isSelected = (dateStr: string) => props.selectedDate === dateStr
 
 const handleClick = (day: any) => {
-  if (day && day.isAvailable && !day.isPast) {
+  if (day && !day.isPast && day.isBusiness) {
     emit('select', day.dateStr)
   }
 }
@@ -72,7 +74,7 @@ const handleClick = (day: any) => {
           available: day?.isAvailable && !day?.isPast,
           selected: day && isSelected(day.dateStr)
         }"
-        :disabled="!day || day.isPast || !day.isAvailable"
+        :disabled="!day || day.isPast || !day.isBusiness"
         @click="handleClick(day)"
       >
         <span v-if="day">{{ day.num }}</span>

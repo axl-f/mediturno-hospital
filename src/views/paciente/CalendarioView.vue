@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAgendaStore } from '../../stores/agenda'
 import AppHeader from '../../components/layout/AppHeader.vue'
@@ -16,10 +16,9 @@ const currentDate = new Date()
 const currentYear = ref(currentDate.getFullYear())
 const currentMonth = ref(currentDate.getMonth() + 1)
 
-// Simulamos que hay días disponibles en el mes (en un caso real, llamar a cargarDisponibilidad y derivar)
-const diasDisponibles = ref<string[]>([
-  '2026-05-05', '2026-05-06', '2026-05-07' // placeholders del prompt
-])
+onMounted(() => {
+  agenda.cargarFechasDisponibles(especialidadId)
+})
 
 const nextMonth = () => {
   if (currentMonth.value === 12) {
@@ -71,7 +70,7 @@ const monthName = computed(() => {
         <CalendarGrid 
           :year="currentYear" 
           :month="currentMonth"
-          :diasDisponibles="diasDisponibles"
+          :diasDisponibles="agenda.fechasDisponibles"
           @select="selectDate"
         />
       </div>

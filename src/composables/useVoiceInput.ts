@@ -84,24 +84,11 @@ export function useVoiceInput() {
     recognition.continuous = true // Keep listening while holding
 
     recognition.onresult = (event: any) => {
-      let finalTranscript = ''
-      let interimTranscript = ''
-
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript
-        } else {
-          interimTranscript += event.results[i][0].transcript
-        }
+      let currentTranscript = ''
+      for (let i = 0; i < event.results.length; ++i) {
+        currentTranscript += event.results[i][0].transcript + ' '
       }
-
-      // Concat the new final results to the existing transcript
-      transcript.value += finalTranscript
-      if (interimTranscript && !finalTranscript) {
-        // Just for visual feedback, we could show interim, but for now let's just append
-        // Actually, replacing the transcript with interim might erase previous words.
-        // Let's just keep appending finalTranscript to avoid losing data when holding.
-      }
+      transcript.value = currentTranscript.trim()
     }
 
     recognition.onerror = (event: any) => {

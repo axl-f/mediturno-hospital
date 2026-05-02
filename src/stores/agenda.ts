@@ -31,6 +31,7 @@ export interface PacienteEspera {
 export const useAgendaStore = defineStore('agenda', () => {
   const especialidades = ref<Especialidad[]>([])
   const disponibilidad = ref<Record<string, Record<string, string[]>>>({})
+  const fechasDisponibles = ref<string[]>([])
   const citasDelDia = ref<Cita[]>([])
   const listaEspera = ref<Record<string, PacienteEspera[]>>({})
   const cargando = ref(false)
@@ -45,6 +46,24 @@ export const useAgendaStore = defineStore('agenda', () => {
           id: key,
           ...data[key]
         }))
+      }
+    } finally {
+      cargando.value = false
+    }
+  }
+
+  async function cargarFechasDisponibles(especialidad: string) {
+    cargando.value = true
+    try {
+      const snap = await get(dbRef(db, `agenda/${especialidad}`))
+      if (snap.exists()) {
+        const data = snap.val()
+        fechasDisponibles.value = Object.keys(data).filter(fecha => {
+          const horarios = data[fecha]
+          return Object.values(horarios).some(val => val === true)
+        })
+      } else {
+        fechasDisponibles.value = []
       }
     } finally {
       cargando.value = false
@@ -162,10 +181,12 @@ export const useAgendaStore = defineStore('agenda', () => {
   return {
     especialidades,
     disponibilidad,
+    fechasDisponibles,
     citasDelDia,
     listaEspera,
     cargando,
     cargarEspecialidades,
+    cargarFechasDisponibles,
     cargarDisponibilidad,
     crearCita,
     cancelarCita,

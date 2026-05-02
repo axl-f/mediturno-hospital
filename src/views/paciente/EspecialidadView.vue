@@ -35,11 +35,8 @@ const goCalendario = (id: string) => {
           :id="esp.id"
           :nombre="esp.nombre"
           :icono="esp.icono"
-          :disponibles="1" 
           @select="goCalendario"
         />
-        <!-- NOTA: disponibles está hardcodeado a 1 para el prototipo, 
-             idealmente se calcularía viendo cuántas horas libres hay hoy -->
       </div>
     </main>
   </div>

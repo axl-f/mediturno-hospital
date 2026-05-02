@@ -14,8 +14,7 @@ const emit = defineEmits<{
 
 const isDisabled = computed(() => props.disponibles === 0)
 const statusText = computed(() => {
-  if (props.disponibles === undefined) return 'Cargando...'
-  if (props.disponibles === 0) return 'Sin horas hoy'
+  if (!props.disponibles || props.disponibles <= 0) return ''
   return `${props.disponibles} ${props.disponibles === 1 ? 'hora disponible' : 'horas disponibles'} hoy`
 })
 </script>
@@ -29,7 +28,7 @@ const statusText = computed(() => {
   >
     <div class="emoji-icon">{{ icono }}</div>
     <h3 class="nombre">{{ nombre }}</h3>
-    <p class="status" :class="{ 'text-success': (disponibles ?? 0) > 0 }">{{ statusText }}</p>
+    <p v-if="statusText" class="status text-success">{{ statusText }}</p>
   </button>
 </template>
 
