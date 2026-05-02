@@ -7,7 +7,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'accion', tipo: 'asistio' | 'no_asistio', citaId: string): void
+  (e: 'accion', tipo: 'asistio' | 'no_asistio' | 'confirmar', citaId: string): void
 }>()
 </script>
 
@@ -21,7 +21,10 @@ const emit = defineEmits<{
     <div class="cell-esp">{{ cita.especialidad }}</div>
     <div class="cell-status"><StatusBadge :estado="cita.estado" /></div>
     
-    <div class="cell-actions" v-if="esHoy && cita.estado === 'confirmada'">
+    <div class="cell-actions" v-if="cita.estado === 'pendiente'">
+      <button class="btn-text text-primary" @click="emit('accion', 'confirmar', cita.id)">Confirmar</button>
+    </div>
+    <div class="cell-actions" v-else-if="esHoy && cita.estado === 'confirmada'">
       <button class="btn-icon text-success" title="Asistió" @click="emit('accion', 'asistio', cita.id)">✓</button>
       <button class="btn-icon text-danger" title="No asistió" @click="emit('accion', 'no_asistio', cita.id)">✗</button>
     </div>
@@ -58,6 +61,17 @@ const emit = defineEmits<{
 .btn-icon:hover { background: var(--color-border); }
 .text-success { color: var(--color-success); }
 .text-danger { color: var(--color-danger); }
+.text-primary { color: var(--color-primary); }
+
+.btn-text {
+  background: transparent;
+  border: 1px solid currentColor;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: bold;
+}
+.btn-text:hover { background: var(--color-primary-light); }
 
 @media (max-width: 767px) {
   .cita-row {

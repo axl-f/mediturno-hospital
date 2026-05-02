@@ -36,8 +36,9 @@ const cancelacionPorcentaje = computed(() => total.value ? Math.round((cancelada
 
 const hayAlerta = computed(() => cancelacionPorcentaje.value > 30)
 
-const manejarAccion = async (tipo: 'asistio'|'no_asistio', citaId: string) => {
-  await update(dbRef(db, `citas/${citaId}`), { estado: tipo })
+const manejarAccion = async (tipo: 'asistio'|'no_asistio'|'confirmar', citaId: string) => {
+  const nuevoEstado = tipo === 'confirmar' ? 'confirmada' : tipo
+  await update(dbRef(db, `citas/${citaId}`), { estado: nuevoEstado })
 }
 </script>
 

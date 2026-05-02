@@ -4,6 +4,8 @@ import { useAgendaStore } from '../../stores/agenda'
 import { useAuthStore } from '../../stores/auth'
 import AppNav from '../../components/layout/AppNav.vue'
 import StatusBadge from '../../components/shared/StatusBadge.vue'
+import { update, ref as dbRef } from 'firebase/database'
+import { db } from '../../firebase'
 
 const agenda = useAgendaStore()
 const auth = useAuthStore()
@@ -25,6 +27,11 @@ const formatDate = () => {
   const [y, m, d] = fechaHoy.split('-')
   const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d))
   return date.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+const manejarAccion = async (tipo: 'asistio'|'no_asistio'|'confirmar', citaId: string) => {
+  const nuevoEstado = tipo === 'confirmar' ? 'confirmada' : tipo
+  await update(dbRef(db, `citas/${citaId}`), { estado: nuevoEstado })
 }
 </script>
 
@@ -55,7 +62,16 @@ const formatDate = () => {
           <div class="bloque-detalle">
             <h3 class="paciente-nombre">{{ cita.pacienteNombre }}</h3>
             <p class="paciente-rut">{{ cita.pacienteRut }}</p>
-            <StatusBadge :estado="cita.estado" />
+            <div class="status-row">
+              <StatusBadge :estado="cita.estado" />
+              <div class="cell-actions" v-if="cita.estado === 'pendiente'">
+                <button class="btn-text text-primary" @click="manejarAccion('confirmar', cita.id)">Confirmar</button>
+              </div>
+              <div class="cell-actions" v-else-if="cita.estado === 'confirmada'">
+                <button class="btn-icon text-success" title="Asistió" @click="manejarAccion('asistio', cita.id)">✓</button>
+                <button class="btn-icon text-danger" title="No asistió" @click="manejarAccion('no_asistio', cita.id)">✗</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -157,4 +173,30 @@ const formatDate = () => {
   color: var(--color-text-secondary);
   font-size: 1.125rem;
 }
+
+.status-row { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 8px; }
+.cell-actions { display: flex; gap: 8px; }
+.btn-icon {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid currentColor;
+  background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+}
+.btn-icon:hover { background: var(--color-bg); }
+.text-success { color: var(--color-success); }
+.text-danger { color: var(--color-danger); }
+.text-primary { color: var(--color-primary); }
+
+.btn-text {
+  background: transparent;
+  border: 1px solid currentColor;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: bold;
+}
+.btn-text:hover { background: var(--color-primary-light); }
 </style>

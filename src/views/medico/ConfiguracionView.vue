@@ -43,9 +43,9 @@ const guardarDisponibilidad = async () => {
   mensajeExito.value = ''
   
   try {
-    const dataAguardar: Record<string, null> = {}
+    const dataAguardar: Record<string, boolean> = {}
     horariosSeleccionados.value.forEach(h => {
-      dataAguardar[h] = null // null means available in our RTDB structure
+      dataAguardar[h] = true
     })
 
     const path = `agenda/${auth.usuario.especialidad}/${fechaInput.value}`

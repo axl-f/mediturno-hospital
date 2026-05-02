@@ -58,7 +58,7 @@ export const useAgendaStore = defineStore('agenda', () => {
       if (snap.exists()) {
         const data = snap.val()
         if (!disponibilidad.value[especialidad]) disponibilidad.value[especialidad] = {}
-        const horasLibres = Object.keys(data).filter(h => data[h] === null)
+        const horasLibres = Object.keys(data).filter(h => data[h] === true)
         disponibilidad.value[especialidad][fecha] = horasLibres
       } else {
         if (!disponibilidad.value[especialidad]) disponibilidad.value[especialidad] = {}
@@ -77,7 +77,7 @@ export const useAgendaStore = defineStore('agenda', () => {
       const cita: Cita = {
         id: nuevaCitaRef.key as string,
         ...datos,
-        estado: 'confirmada'
+        estado: 'pendiente'
       }
 
       // Transacción o multi-update

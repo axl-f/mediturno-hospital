@@ -30,6 +30,31 @@
       "nombre": "Dr. Jorge Alvarado",
       "especialidad": "medicina_general",
       "password": "medico123"
+    },
+    "medico2": {
+      "nombre": "Dra. Marta Gómez",
+      "especialidad": "traumatologia",
+      "password": "medico123"
+    },
+    "medico3": {
+      "nombre": "Dr. Felipe Aránguiz",
+      "especialidad": "oftalmologia",
+      "password": "medico123"
+    },
+    "medico4": {
+      "nombre": "Dra. Claudia Ramos",
+      "especialidad": "neurologia",
+      "password": "medico123"
+    },
+    "medico5": {
+      "nombre": "Dr. Héctor Salinas",
+      "especialidad": "cardiologia",
+      "password": "medico123"
+    },
+    "medico6": {
+      "nombre": "Dra. Sofía Valenzuela",
+      "especialidad": "pediatria",
+      "password": "medico123"
     }
   },
   "especialidades": {
