@@ -3,8 +3,9 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useNetwork } from '@vueuse/core'
-import VoiceButton from '../components/shared/VoiceButton.vue'
+import AsistenteButton from '../components/shared/AsistenteButton.vue'
 import BigButton from '../components/shared/BigButton.vue'
+import { useVoiceAssist } from '../composables/useVoiceAssist'
 
 const { isOnline } = useNetwork()
 
@@ -16,6 +17,8 @@ const rutInput = ref('')
 const adminUser = ref('')
 const adminPass = ref('')
 const errorMsg = ref('')
+
+const { asistenteActivo, toggleAsistente, hablar, hablarForzado } = useVoiceAssist()
 
 const rutDisplay = computed(() => {
   if (!rutInput.value) return 'Ej: 12345678-9'
@@ -33,25 +36,22 @@ const handleTeclado = (key: string) => {
   errorMsg.value = ''
   if (key === 'del') {
     rutInput.value = rutInput.value.slice(0, -1)
+    hablar('Borrar')
   } else if (key === 'enter') {
+    hablar('Iniciando sesión')
     submitPaciente()
   } else {
     if (rutInput.value.length < 9) {
       rutInput.value += key
+      hablar(key)
     }
-  }
-}
-
-const handleVoiceResult = (digits: string) => {
-  rutInput.value = digits
-  if (digits.length >= 7) {
-    submitPaciente()
   }
 }
 
 const submitPaciente = async () => {
   if (rutInput.value.length < 7) {
     errorMsg.value = 'RUT inválido'
+    hablarForzado('El RUT ingresado no es válido')
     shakeCard()
     return
   }
@@ -60,6 +60,7 @@ const submitPaciente = async () => {
     router.push('/paciente')
   } else {
     errorMsg.value = 'RUT no encontrado. Consulte en la ventanilla.'
+    hablarForzado('RUT no encontrado. Por favor consulte en ventanilla.')
     shakeCard()
   }
 }
@@ -127,9 +128,9 @@ const shakeCard = () => {
         <h2 class="section-title">Ingrese su RUT</h2>
         
         <div class="input-methods">
-          <VoiceButton label="Dictar RUT" @result="handleVoiceResult" />
+          <AsistenteButton :activo="asistenteActivo" @toggle="toggleAsistente" />
           
-          <div class="separator"><span>o use el teclado</span></div>
+          <div class="separator"><span>o use el teclado directamente</span></div>
           
           <div class="rut-display" :class="{ error: errorMsg }">{{ rutDisplay }}</div>
           

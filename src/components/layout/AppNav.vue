@@ -117,7 +117,35 @@ const logout = () => {
 
 @media (max-width: 767px) {
   .app-nav {
-    display: none; /* En móvil se maneja un layout diferente o sidebar colapsable */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid var(--color-border);
+    z-index: 100;
+  }
+  .nav-brand, .nav-footer { display: none; }
+  .nav-links {
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 0;
+  }
+  :deep(.nav-link) {
+    flex-direction: column;
+    padding: 8px 4px;
+    font-size: 0.75rem;
+    gap: 4px;
+    text-align: center;
+    border-right: none !important;
+  }
+  :deep(.nav-link.router-link-active) {
+    border-top: 3px solid var(--color-primary);
+    background: transparent;
   }
 }
 </style>

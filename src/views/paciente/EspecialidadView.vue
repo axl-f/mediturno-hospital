@@ -76,13 +76,12 @@ const goCalendario = (id: string) => {
 
 .especialidades-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1rem;
 }
 
 @media (min-width: 768px) {
   .especialidades-grid {
-    grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
   }
 }
