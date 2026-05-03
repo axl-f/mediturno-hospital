@@ -59,8 +59,8 @@ const unirseListaEspera = async () => {
   if (!auth.usuario || !auth.usuario.rut) return
   anotando.value = true
   try {
-    await agenda.unirseListaEspera(especialidadId, auth.usuario.rut, auth.usuario.nombre)
-    alert('Se ha anotado exitosamente en la lista de espera.')
+    await agenda.unirseListaEspera(especialidadId, auth.usuario.rut, auth.usuario.nombre, fecha)
+    alert('Se ha anotado exitosamente en la lista de espera para esta fecha.')
     router.push('/paciente/mis-citas')
   } catch(e) {
     alert('Hubo un error al anotarse en la lista de espera.')

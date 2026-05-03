@@ -26,6 +26,7 @@ export interface PacienteEspera {
   nombre: string
   timestamp: number
   notificado?: boolean
+  fechaEsperada?: string
 }
 
 export const useAgendaStore = defineStore('agenda', () => {
@@ -105,6 +106,10 @@ export const useAgendaStore = defineStore('agenda', () => {
       updates[`agenda/${cita.especialidad}/${cita.fecha}/${cita.hora}`] = cita.id
 
       await update(dbRef(db), updates)
+      
+      // Intentar remover al paciente de la lista de espera si existía
+      await removerPacienteDeEsperaPorRut(cita.especialidad, cita.pacienteRut)
+      
       return cita.id
     } finally {
       cargando.value = false
@@ -161,21 +166,38 @@ export const useAgendaStore = defineStore('agenda', () => {
     })
   }
 
-  async function unirseListaEspera(especialidad: string, rut: string, nombre: string) {
+  async function unirseListaEspera(especialidad: string, rut: string, nombre: string, fechaEsperada: string) {
     const queueRef = dbRef(db, `listaEspera/${especialidad}/queue`)
     const nuevoPaciente = {
       rut,
       nombre,
       timestamp: Date.now(),
-      notificado: false
+      notificado: false,
+      fechaEsperada
     }
     await push(queueRef, nuevoPaciente)
+  }
+
+  async function notificarPaciente(especialidad: string, id: string) {
+    await update(dbRef(db), {
+      [`listaEspera/${especialidad}/queue/${id}/notificado`]: true
+    })
   }
 
   async function removerDeListaEspera(especialidad: string, id: string) {
     await update(dbRef(db), {
       [`listaEspera/${especialidad}/queue/${id}`]: null
     })
+  }
+
+  async function removerPacienteDeEsperaPorRut(especialidad: string, rut: string) {
+    const queueData = listaEspera.value[especialidad]
+    if (queueData) {
+      const paciente = queueData.find(p => p.rut === rut)
+      if (paciente && paciente.id) {
+        await removerDeListaEspera(especialidad, paciente.id)
+      }
+    }
   }
 
   return {
@@ -194,6 +216,7 @@ export const useAgendaStore = defineStore('agenda', () => {
     suscribirListaEspera,
     unirseListaEspera,
     removerDeListaEspera,
-    agregarListaEspera
+    agregarListaEspera,
+    notificarPaciente
   }
 })

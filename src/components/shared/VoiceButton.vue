@@ -12,22 +12,19 @@ const emit = defineEmits<{
 
 const { isSupported, isListening, startListening, stopListening, transcript, digitsOnly } = useVoiceInput()
 
-const handleMouseDown = () => {
+const toggleListening = () => {
   if (!isSupported.value) return
   
-  if (transcript.value === '') {
-    const utterance = new SpeechSynthesisUtterance("Diga su RUT número a número")
-    utterance.lang = 'es-CL'
-    window.speechSynthesis.speak(utterance)
+  if (isListening.value) {
+    stopListening()
+  } else {
+    if (transcript.value === '') {
+      const utterance = new SpeechSynthesisUtterance("Diga su RUT número a número")
+      utterance.lang = 'es-CL'
+      window.speechSynthesis.speak(utterance)
+    }
+    startListening()
   }
-
-  // To avoid stopping immediately if user clicks quickly, we just start listening
-  startListening()
-}
-
-const handleMouseUp = () => {
-  if (!isSupported.value) return
-  stopListening()
 }
 
 watch(isListening, (newVal, oldVal) => {
@@ -44,14 +41,9 @@ watch(isListening, (newVal, oldVal) => {
     <button 
       class="voice-btn" 
       :class="{ listening: isListening }"
-      @mousedown="handleMouseDown"
-      @mouseup="handleMouseUp"
-      @mouseleave="handleMouseUp"
-      @touchstart.prevent="handleMouseDown"
-      @touchend.prevent="handleMouseUp"
-      @touchcancel.prevent="handleMouseUp"
+      @click="toggleListening"
       type="button"
-      aria-label="Mantener presionado para dictar"
+      aria-label="Presionar para dictar"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>

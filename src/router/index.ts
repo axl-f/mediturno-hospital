@@ -55,10 +55,10 @@ const router = createRouter({
       meta: { requiresRole: 'admin', transition: 'slide-left' }
     },
     {
-      path: '/admin/espera',
-      name: 'admin-espera',
-      component: () => import('../views/admin/ListaEsperaView.vue'),
-      meta: { requiresRole: 'admin', transition: 'slide-left' }
+      path: '/medico/espera',
+      name: 'medico-espera',
+      component: () => import('../views/medico/ListaEsperaView.vue'),
+      meta: { requiresRole: 'medico', transition: 'slide-left' }
     },
     {
       path: '/admin/alertas',

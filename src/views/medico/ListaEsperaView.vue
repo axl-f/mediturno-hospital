@@ -1,39 +1,37 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useAgendaStore } from '../../stores/agenda'
+import { useAuthStore } from '../../stores/auth'
 import AppNav from '../../components/layout/AppNav.vue'
 import BigButton from '../../components/shared/BigButton.vue'
 
 const agenda = useAgendaStore()
-const especialidadActual = ref('')
+const auth = useAuthStore()
+
+const especialidadActual = computed(() => auth.usuario?.especialidad || '')
 
 const pacientes = computed(() => {
   return agenda.listaEspera[especialidadActual.value] || []
 })
 
 onMounted(() => {
-  agenda.cargarEspecialidades()
   agenda.suscribirListaEspera()
-  if (agenda.especialidades.length > 0) {
-    especialidadActual.value = agenda.especialidades[0].id
-  }
 })
 
 const notificar = async (paciente: any) => {
-  // En la vida real, actualizar firebase y quizás llamar API de SMS
-  // Aquí removemos o marcamos
-  await agenda.removerDeListaEspera(especialidadActual.value, paciente.id)
-  alert(`Se ha enviado una notificación a ${paciente.nombre}`)
+  if (!paciente.id) return
+  await agenda.notificarPaciente(especialidadActual.value, paciente.id)
+  alert(`Se ha enviado una notificación a ${paciente.nombre} para la fecha ${paciente.fechaEsperada || 'solicitada'}`)
 }
 </script>
 
 <template>
   <div class="admin-layout">
     <AppNav>
-      <router-link to="/admin" class="nav-link">📅 Agenda</router-link>
-      <router-link to="/admin/espera" class="nav-link">⏳ Lista de Espera</router-link>
-      <router-link to="/admin/alertas" class="nav-link">⚠️ Alertas</router-link>
-      <router-link to="/admin/usuarios" class="nav-link">👥 Gestión Usuarios</router-link>
+      <router-link to="/medico" class="nav-link">📅 Agenda de Hoy</router-link>
+      <router-link to="/medico/espera" class="nav-link">⏳ Lista de Espera</router-link>
+      <router-link to="/medico/checklist" class="nav-link">✅ Checklist</router-link>
+      <router-link to="/medico/configuracion" class="nav-link">⚙️ Disponibilidad</router-link>
     </AppNav>
     
     <main class="admin-content">
@@ -43,16 +41,12 @@ const notificar = async (paciente: any) => {
       </div>
 
       <div class="filter-section">
-        <select v-model="especialidadActual" class="esp-select">
-          <option v-for="esp in agenda.especialidades" :key="esp.id" :value="esp.id">
-            {{ esp.nombre }}
-          </option>
-        </select>
+        <h3 class="esp-title">Especialidad: <span class="capitalize">{{ especialidadActual.replace('_', ' ') }}</span></h3>
       </div>
 
       <div class="table-container">
         <div class="table-desktop-header">
-          <div>Posición</div><div>Paciente</div><div>Ingreso</div><div>Acción</div>
+          <div>Posición</div><div>Paciente</div><div>Fecha Solicitada</div><div>Acción</div>
         </div>
 
         <div class="table-body">
@@ -63,13 +57,14 @@ const notificar = async (paciente: any) => {
               <div class="nombre">{{ p.nombre }}</div>
               <div class="rut">{{ p.rut }}</div>
             </div>
-            <div class="cell-time">{{ new Date(p.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</div>
+            <div class="cell-time">{{ p.fechaEsperada || 'Cualquiera' }}</div>
             <div class="cell-actions">
+              <span v-if="p.notificado" class="badge-notificado">Notificado ✓</span>
               <BigButton 
-                :label="p.notificado ? 'Notificado ✓' : 'Notificar'" 
-                :variant="p.notificado ? 'success' : 'primary'"
+                v-else
+                label="Notificar" 
+                variant="primary"
                 size="md"
-                :disabled="p.notificado"
                 @click="notificar(p)"
               />
             </div>
@@ -101,13 +96,9 @@ const notificar = async (paciente: any) => {
 .filter-section {
   margin-bottom: 1.5rem;
 }
-.esp-select {
-  padding: 12px 16px;
-  font-size: 1.125rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  min-width: 300px;
-}
+
+.esp-title { font-size: 1.25rem; margin: 0; color: var(--color-text-secondary); }
+.capitalize { text-transform: capitalize; color: var(--color-primary); }
 
 .table-container {
   background: white;
@@ -118,7 +109,7 @@ const notificar = async (paciente: any) => {
 
 .table-desktop-header {
   display: grid;
-  grid-template-columns: 80px 1fr 120px 160px;
+  grid-template-columns: 80px 1fr 150px 160px;
   padding: 1rem;
   background: var(--color-bg);
   font-weight: bold;
@@ -130,7 +121,7 @@ const notificar = async (paciente: any) => {
 
 .espera-row {
   display: grid;
-  grid-template-columns: 80px 1fr 120px 160px;
+  grid-template-columns: 80px 1fr 150px 160px;
   align-items: center;
   padding: 1rem;
   border-bottom: 1px solid var(--color-border);
@@ -140,7 +131,9 @@ const notificar = async (paciente: any) => {
 .cell-pos { font-size: 1.5rem; font-weight: bold; color: var(--color-border); }
 .cell-paciente .nombre { font-weight: 500; }
 .cell-paciente .rut { font-size: var(--text-caption); color: var(--color-text-secondary); }
-.cell-time { color: var(--color-text-secondary); }
+.cell-time { color: var(--color-text-secondary); font-weight: bold; }
+
+.badge-notificado { background: var(--color-success); color: white; padding: 6px 12px; border-radius: 99px; font-weight: bold; font-size: 0.875rem; display: inline-block; }
 
 @media (max-width: 767px) {
   .table-desktop-header { display: none; }
