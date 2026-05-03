@@ -1,5 +1,6 @@
 <script setup lang="ts">
 
+
 const props = defineProps<{
   activo: boolean
   label?: string
