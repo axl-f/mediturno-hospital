@@ -44,6 +44,9 @@ const handleTeclado = (key: string) => {
 
 const handleVoiceResult = (digits: string) => {
   rutInput.value = digits
+  if (digits.length >= 7) {
+    submitPaciente()
+  }
 }
 
 const submitPaciente = async () => {

@@ -20,7 +20,8 @@ export function useVoiceInput() {
       'setecientos': 700, 'ochocientos': 800, 'novecientos': 900, 'mil': 1000, 'k': 'k'
     }
 
-    const words = text.toLowerCase().replace(/,/g, ' ').split(/\s+/)
+    // Reemplazamos puntos y guiones por nada, para que un RUT formateado nativamente "12.345.678-9" pase a "123456789"
+    const words = text.toLowerCase().replace(/[.,-]/g, ' ').split(/\s+/)
     let result = ""
     let currentGroup = 0
     let lastVal = Infinity
