@@ -23,6 +23,15 @@ const logout = () => {
 
     <div class="nav-links">
       <slot></slot>
+      <!-- Boton logout solo visible en movil -->
+      <button class="nav-logout-mobile" @click="logout" title="Cerrar sesión">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        <span>Salir</span>
+      </button>
     </div>
 
     <div class="nav-footer">
@@ -115,6 +124,11 @@ const logout = () => {
   background: var(--color-danger-light);
 }
 
+/* Boton logout mobile: oculto en desktop */
+.nav-logout-mobile {
+  display: none;
+}
+
 @media (max-width: 767px) {
   .app-nav {
     position: fixed;
@@ -128,12 +142,14 @@ const logout = () => {
     border-right: none;
     border-top: 1px solid var(--color-border);
     z-index: 100;
+    background: white;
   }
   .nav-brand, .nav-footer { display: none; }
   .nav-links {
     flex-direction: row;
     justify-content: space-around;
     padding: 0;
+    width: 100%;
   }
   :deep(.nav-link) {
     flex-direction: column;
@@ -146,6 +162,23 @@ const logout = () => {
   :deep(.nav-link.router-link-active) {
     border-top: 3px solid var(--color-primary);
     background: transparent;
+    color: var(--color-primary);
+  }
+  /* Mostrar logout en movil igual que los nav-link */
+  .nav-logout-mobile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-danger);
+    background: none;
+    border: none;
+    cursor: pointer;
+    min-width: 56px;
   }
 }
 </style>
