@@ -48,7 +48,7 @@ const agendarDesdeNotificacion = (notif: any) => {
 
 // ── Agendamiento Automático ────────────────────────────────────────────────
 const modalAbierto = ref(false)
-const paso = ref<'seleccion' | 'buscando' | 'confirmado' | 'sinCupos'>('seleccion')
+const paso = ref<'seleccion' | 'buscando' | 'confirmado' | 'sinCupos' | 'enEspera'>('seleccion')
 const especialidadElegida = ref<any>(null)
 const resultadoCita = ref<{ fecha: string; hora: string; especialidad: string } | null>(null)
 
@@ -121,6 +121,17 @@ const formatFecha = (iso: string) => {
   const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d))
   return date.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })
 }
+
+const unirseEspera = async () => {
+  if (!especialidadElegida.value || !auth.usuario?.rut) return
+  await agenda.unirseListaEspera(
+    especialidadElegida.value.id,
+    auth.usuario.rut,
+    auth.usuario.nombre,
+    ''
+  )
+  paso.value = 'enEspera'
+}
 </script>
 
 <template>
@@ -170,7 +181,7 @@ const formatFecha = (iso: string) => {
 
         <BigButton
           label="Mis citas"
-          variant="outline"
+          variant="ghost"
           size="md"
           @click="router.push('/paciente/mis-citas')"
         />
@@ -235,11 +246,26 @@ const formatFecha = (iso: string) => {
         <div v-else-if="paso === 'sinCupos'" class="step-center">
           <div class="warn-circle">!</div>
           <h2>Sin cupos disponibles</h2>
-          <p>No hay horarios disponibles para <strong>{{ especialidadElegida?.nombre }}</strong> en este momento.</p>
+          <p>No hay horarios para <strong>{{ especialidadElegida?.nombre }}</strong> en este momento.</p>
           <div class="no-cupos-actions">
+            <button class="waitlist-btn" @click="unirseEspera">
+              <span class="waitlist-icon">⏳</span>
+              <div class="waitlist-text">
+                <span class="waitlist-title">Anotarme en lista de espera</span>
+                <span class="waitlist-sub">Le avisaremos cuando haya un cupo disponible</span>
+              </div>
+            </button>
             <BigButton label="Intentar otra especialidad" variant="secondary" @click="paso = 'seleccion'" />
-            <BigButton label="Cerrar" variant="outline" @click="cerrarAsistente" />
+            <BigButton label="Cerrar" variant="ghost" @click="cerrarAsistente" />
           </div>
+        </div>
+
+        <!-- Paso 5: Anotado en espera -->
+        <div v-else-if="paso === 'enEspera'" class="step-center">
+          <div class="wait-circle">⏳</div>
+          <h2>¡Anotado en lista de espera!</h2>
+          <p>Lo notificaremos en cuanto se libere un cupo en <strong>{{ especialidadElegida?.nombre }}</strong>. La notificación aparecerá en su pantalla de inicio.</p>
+          <BigButton label="Entendido, cerrar" variant="success" @click="cerrarAsistente" />
         </div>
       </div>
     </div>
@@ -489,4 +515,40 @@ const formatFecha = (iso: string) => {
   gap: 0.75rem;
   width: 100%;
 }
+
+/* Botón lista de espera */
+.waitlist-btn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 1.25rem;
+  border: 2px solid var(--color-warning, #f59e0b);
+  border-radius: 12px;
+  background: #fffbeb;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+.waitlist-btn:hover {
+  background: #fef3c7;
+  transform: translateY(-1px);
+}
+.waitlist-icon { font-size: 1.75rem; min-width: 36px; text-align: center; }
+.waitlist-text { display: flex; flex-direction: column; gap: 2px; }
+.waitlist-title { font-weight: 700; font-size: 1rem; color: #92400e; }
+.waitlist-sub { font-size: 0.8rem; color: #a16207; }
+
+.wait-circle {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: white;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
 </style>
+
