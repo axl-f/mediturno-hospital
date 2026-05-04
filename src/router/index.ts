@@ -4,13 +4,23 @@ import { useAuthStore } from '../stores/auth'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    // ─── Acceso público ───────────────────────────────────────────────
     {
       path: '/',
-      name: 'login',
-      component: () => import('../views/LoginView.vue'),
-      meta: { transition: 'slide-left' }
+      name: 'terminal',
+      component: () => import('../views/TerminalView.vue')
     },
-    // Flujo Paciente
+    {
+      path: '/login',
+      name: 'login-paciente',
+      component: () => import('../views/LoginView.vue')
+    },
+    {
+      path: '/acceso-personal',
+      name: 'acceso-personal',
+      component: () => import('../views/AccesoPersonalView.vue')
+    },
+    // ─── Flujo Paciente ───────────────────────────────────────────────
     {
       path: '/paciente',
       name: 'paciente-home',
@@ -47,18 +57,12 @@ const router = createRouter({
       component: () => import('../views/paciente/MisCitasView.vue'),
       meta: { requiresRole: 'paciente', transition: 'slide-left' }
     },
-    // Flujo Admin
+    // ─── Flujo Admin ──────────────────────────────────────────────────
     {
       path: '/admin',
       name: 'admin-agenda',
       component: () => import('../views/admin/AgendaView.vue'),
       meta: { requiresRole: 'admin', transition: 'slide-left' }
-    },
-    {
-      path: '/medico/espera',
-      name: 'medico-espera',
-      component: () => import('../views/medico/ListaEsperaView.vue'),
-      meta: { requiresRole: 'medico', transition: 'slide-left' }
     },
     {
       path: '/admin/alertas',
@@ -72,11 +76,17 @@ const router = createRouter({
       component: () => import('../views/admin/UsuariosView.vue'),
       meta: { requiresRole: 'admin', transition: 'slide-left' }
     },
-    // Flujo Medico
+    // ─── Flujo Médico ─────────────────────────────────────────────────
     {
       path: '/medico',
       name: 'medico-agendahoy',
       component: () => import('../views/medico/AgendaHoyView.vue'),
+      meta: { requiresRole: 'medico', transition: 'slide-left' }
+    },
+    {
+      path: '/medico/espera',
+      name: 'medico-espera',
+      component: () => import('../views/medico/ListaEsperaView.vue'),
       meta: { requiresRole: 'medico', transition: 'slide-left' }
     },
     {
@@ -96,10 +106,10 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
-  
+
   if (to.meta.requiresRole && (!auth.usuario || auth.usuario.rol !== to.meta.requiresRole)) {
     next('/')
-  } else if (to.path === '/' && auth.usuario) {
+  } else if ((to.path === '/' || to.path === '/login' || to.path === '/acceso-personal') && auth.usuario) {
     if (auth.usuario.rol === 'paciente') next('/paciente')
     else if (auth.usuario.rol === 'admin') next('/admin')
     else if (auth.usuario.rol === 'medico') next('/medico')

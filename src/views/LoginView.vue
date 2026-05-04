@@ -4,25 +4,19 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useNetwork } from '@vueuse/core'
 import AsistenteButton from '../components/shared/AsistenteButton.vue'
-import BigButton from '../components/shared/BigButton.vue'
 import { useVoiceAssist } from '../composables/useVoiceAssist'
 
 const { isOnline } = useNetwork()
-
 const router = useRouter()
 const auth = useAuthStore()
 
-const rolSeleccionado = ref<'paciente' | 'admin' | 'medico'>('paciente')
 const rutInput = ref('')
-const adminUser = ref('')
-const adminPass = ref('')
 const errorMsg = ref('')
 
 const { asistenteActivo, toggleAsistente, hablar, hablarForzado } = useVoiceAssist()
 
 const rutDisplay = computed(() => {
-  if (!rutInput.value) return 'Ej: 12345678-9'
-  // Formateo simple para display
+  if (!rutInput.value) return 'Ej: 12.345.678-9'
   let rut = rutInput.value.replace(/[^0-9kK]/g, '')
   if (rut.length > 1) {
     const dv = rut.slice(-1)
@@ -38,46 +32,13 @@ const handleTeclado = (key: string) => {
     rutInput.value = rutInput.value.slice(0, -1)
     hablar('Borrar')
   } else if (key === 'enter') {
-    hablar('Iniciando sesión')
+    hablar('Verificando RUT')
     submitPaciente()
   } else {
     if (rutInput.value.length < 9) {
       rutInput.value += key
       hablar(key)
     }
-  }
-}
-
-const submitPaciente = async () => {
-  if (rutInput.value.length < 7) {
-    errorMsg.value = 'RUT inválido'
-    hablarForzado('El RUT ingresado no es válido')
-    shakeCard()
-    return
-  }
-  const res = await auth.loginConRut(rutInput.value)
-  if (res.ok) {
-    router.push('/paciente')
-  } else {
-    errorMsg.value = 'RUT no encontrado. Consulte en la ventanilla.'
-    hablarForzado('RUT no encontrado. Por favor consulte en ventanilla.')
-    shakeCard()
-  }
-}
-
-const submitStaff = async () => {
-  let res
-  if (rolSeleccionado.value === 'admin') {
-    res = await auth.loginAdmin(adminUser.value, adminPass.value)
-  } else {
-    res = await auth.loginMedico(adminUser.value, adminPass.value)
-  }
-  
-  if (res.ok) {
-    router.push(`/${rolSeleccionado.value}`)
-  } else {
-    errorMsg.value = 'Credenciales incorrectas'
-    shakeCard()
   }
 }
 
@@ -89,13 +50,32 @@ const shakeCard = () => {
     loginCard.value.classList.add('shake')
   }
 }
+
+const submitPaciente = async () => {
+  if (rutInput.value.length < 7) {
+    errorMsg.value = 'RUT inválido. Ingrese al menos 7 dígitos.'
+    hablarForzado('El RUT ingresado no es válido')
+    shakeCard()
+    return
+  }
+  const res = await auth.loginConRut(rutInput.value)
+  if (res.ok) {
+    router.push('/paciente')
+  } else {
+    errorMsg.value = 'RUT no encontrado. Consulte en la ventanilla de recepción.'
+    hablarForzado('RUT no encontrado. Por favor consulte en ventanilla.')
+    shakeCard()
+  }
+}
 </script>
 
 <template>
   <div class="login-layout">
     <div v-if="!isOnline" class="offline-banner">
-      Sin conexión. Intente en un momento.
+      ⚠️ Sin conexión a Internet. Intente en un momento.
     </div>
+
+    <button class="back-btn" @click="router.push('/')">← Volver al inicio</button>
 
     <div class="login-card" ref="loginCard">
       <div class="header-section">
@@ -105,63 +85,33 @@ const shakeCard = () => {
             <path d="M12 8v8M8 12h8"></path>
           </svg>
         </div>
-        <h1 class="title">MediTurno</h1>
-        <p class="subtitle">Agendamiento de horas médicas</p>
+        <div>
+          <h1 class="title">Identificación del Paciente</h1>
+          <p class="subtitle">Ingrese su RUT para acceder al sistema</p>
+        </div>
       </div>
 
-      <div class="role-selector">
-        <button 
-          :class="['role-btn', { active: rolSeleccionado === 'paciente' }]"
-          @click="rolSeleccionado = 'paciente'; errorMsg = ''"
-        >🏥 Paciente</button>
-        <button 
-          :class="['role-btn', { active: rolSeleccionado === 'admin' }]"
-          @click="rolSeleccionado = 'admin'; errorMsg = ''"
-        >📋 Admin</button>
-        <button 
-          :class="['role-btn', { active: rolSeleccionado === 'medico' }]"
-          @click="rolSeleccionado = 'medico'; errorMsg = ''"
-        >👨‍⚕️ Médico</button>
+      <div class="divider"></div>
+
+      <AsistenteButton :activo="asistenteActivo" @toggle="toggleAsistente" />
+
+      <div class="separator"><span>Ingrese su RUT con el teclado</span></div>
+
+      <div class="rut-display" :class="{ error: errorMsg }">{{ rutDisplay }}</div>
+
+      <div class="numpad" :class="{ disabled: auth.cargando }">
+        <button v-for="n in 9" :key="n" class="num-btn" @click="handleTeclado(n.toString())">{{ n }}</button>
+        <button class="num-btn action-btn" @click="handleTeclado('del')">⌫</button>
+        <button class="num-btn" @click="handleTeclado('0')">0</button>
+        <button
+          class="num-btn enter-btn"
+          :style="{ visibility: rutInput.length >= 7 ? 'visible' : 'hidden' }"
+          @click="handleTeclado('enter')"
+        >✓</button>
       </div>
 
-      <div v-if="rolSeleccionado === 'paciente'" class="paciente-section">
-        <h2 class="section-title">Ingrese su RUT</h2>
-        
-        <div class="input-methods">
-          <AsistenteButton :activo="asistenteActivo" @toggle="toggleAsistente" />
-          
-          <div class="separator"><span>o use el teclado directamente</span></div>
-          
-          <div class="rut-display" :class="{ error: errorMsg }">{{ rutDisplay }}</div>
-          
-          <div class="numpad" :class="{ disabled: auth.cargando }">
-            <button v-for="n in 9" :key="n" class="num-btn" @click="handleTeclado(n.toString())">{{ n }}</button>
-            <button class="num-btn action-btn" @click="handleTeclado('del')">⌫</button>
-            <button class="num-btn" @click="handleTeclado('0')">0</button>
-            <button 
-              class="num-btn enter-btn" 
-              :style="{ visibility: rutInput.length >= 7 ? 'visible' : 'hidden' }"
-              @click="handleTeclado('enter')"
-            >✓</button>
-          </div>
-        </div>
-        
-        <p v-if="errorMsg" class="error-text">{{ errorMsg }}</p>
-        <p class="help-text">¿No recuerda su RUT? Solicítelo en ventanilla.</p>
-      </div>
-
-      <div v-else class="staff-section">
-        <div class="form-group">
-          <label>Usuario</label>
-          <input type="text" v-model="adminUser" class="form-input" />
-        </div>
-        <div class="form-group">
-          <label>Contraseña</label>
-          <input type="password" v-model="adminPass" class="form-input" />
-        </div>
-        <p v-if="errorMsg" class="error-text">{{ errorMsg }}</p>
-        <BigButton label="Ingresar" @click="submitStaff" :loading="auth.cargando" />
-      </div>
+      <p v-if="errorMsg" class="error-text">{{ errorMsg }}</p>
+      <p class="help-text">¿No recuerda su RUT? Solicítelo en la ventanilla de recepción.</p>
     </div>
   </div>
 </template>
@@ -169,17 +119,33 @@ const shakeCard = () => {
 <style scoped>
 .login-layout {
   min-height: 100vh;
-  background-color: var(--color-bg);
-  background-image: radial-gradient(var(--color-border) 2px, transparent 2px);
-  background-size: 32px 32px;
+  background: linear-gradient(135deg, #0f3460 0%, #1a5f9e 50%, #16213e 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  padding: 2rem 1rem;
 }
 
+.back-btn {
+  position: fixed;
+  top: 1.5rem;
+  left: 1.5rem;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 99px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s;
+  z-index: 10;
+}
+.back-btn:hover { background: rgba(255,255,255,0.25); }
+
 .offline-banner {
-  position: absolute;
+  position: fixed;
   top: 0; left: 0; right: 0;
   background: var(--color-warning);
   color: white;
@@ -190,218 +156,129 @@ const shakeCard = () => {
 }
 
 .login-card {
-  background: var(--color-surface);
+  background: white;
   width: 100%;
-  max-width: 420px;
-  padding: 2rem;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-md);
+  max-width: 440px;
+  padding: 2.5rem 2rem;
+  border-radius: 24px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.35);
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
-@media (max-width: 480px) {
-  .login-card {
-    min-height: 100dvh;
-    border-radius: 0;
-    justify-content: center;
-    padding: 1.5rem;
-  }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-10px); }
+  40%, 80% { transform: translateX(10px); }
 }
+.shake { animation: shake 0.4s ease; }
 
 .header-section {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .logo-circle {
-  width: 64px; height: 64px;
-  background: var(--color-primary);
-  color: white;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 12px;
-}
-.logo-circle svg { width: 36px; height: 36px; }
-
-.title {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  color: var(--color-primary);
-  margin-bottom: 4px;
-}
-
-.subtitle {
-  color: var(--color-text-secondary);
-  font-size: 1rem;
-}
-
-.role-selector {
-  display: flex;
-  background: var(--color-bg);
-  border-radius: var(--radius-sm);
-  padding: 4px;
-  gap: 4px;
-}
-
-.role-btn {
-  flex: 1;
-  border: none;
-  background: transparent;
-  padding: 12px 4px;
-  font-size: var(--text-label);
-  font-weight: 500;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  transition: all 0.2s;
-  min-height: 56px;
-}
-
-.role-btn.active {
-  background: var(--color-primary);
-  color: white;
-  box-shadow: var(--shadow);
-}
-
-.paciente-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  align-items: center;
-}
-
-.section-title {
-  font-size: 1.125rem;
-  font-weight: bold;
-}
-
-.input-methods {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.separator {
-  width: 100%;
-  text-align: center;
-  border-bottom: 1px solid var(--color-border);
-  line-height: 0.1em;
-  margin: 10px 0;
-}
-.separator span {
-  background: var(--color-surface);
-  padding: 0 10px;
-  color: var(--color-text-secondary);
-  font-size: var(--text-caption);
-}
-
-.rut-display {
-  width: 100%;
+  width: 56px;
   height: 56px;
-  background: var(--color-bg);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  min-width: 56px;
+  background: var(--color-primary);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  color: white;
+}
+.logo-circle svg { width: 28px; height: 28px; }
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--color-primary);
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+}
+.subtitle { margin: 0; color: var(--color-text-secondary); font-size: 0.9rem; }
+
+.divider { height: 1px; background: var(--color-border); }
+
+.separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+.separator::before, .separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.rut-display {
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  text-align: center;
+  font-size: 2rem;
   font-weight: bold;
-  letter-spacing: 2px;
+  letter-spacing: 4px;
+  color: var(--color-primary);
+  min-height: 68px;
+  transition: border-color 0.2s;
 }
-.rut-display.error {
-  border-color: var(--color-danger);
-  color: var(--color-danger);
-}
+.rut-display.error { border-color: var(--color-danger); color: var(--color-danger); }
 
 .numpad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  width: 100%;
-  max-width: 260px;
+  gap: 10px;
 }
-.numpad.disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
+.numpad.disabled { opacity: 0.5; pointer-events: none; }
 
 .num-btn {
-  height: 64px;
-  border: none;
   background: var(--color-bg);
-  font-size: 1.5rem;
-  font-weight: bold;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  font-size: 1.75rem;
+  font-weight: bold;
+  padding: 16px;
   cursor: pointer;
-  transition: background 0.1s;
+  min-height: 64px;
+  transition: all 0.15s;
+  color: var(--color-text);
 }
-@media (max-width: 480px) {
-  .num-btn { height: 56px; }
-}
+.num-btn:active { background: var(--color-primary-light); transform: scale(0.95); }
 
-.num-btn:active {
-  background: var(--color-border);
-}
-
-.action-btn {
-  color: var(--color-danger);
-}
+.action-btn { color: var(--color-danger); font-size: 1.5rem; }
 
 .enter-btn {
   background: var(--color-success);
   color: white;
+  border-color: var(--color-success);
+  font-size: 2rem;
 }
-.enter-btn:active { background: #236b3d; }
-
-.help-text {
-  font-size: var(--text-caption);
-  color: var(--color-text-secondary);
-  text-align: center;
-  margin-top: 8px;
-}
+.enter-btn:active { background: #246e3e; }
 
 .error-text {
-  color: var(--color-danger);
-  font-weight: bold;
-  text-align: center;
-}
-
-.staff-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.form-group label {
-  font-size: var(--text-label);
-  font-weight: 500;
-}
-
-.form-input {
-  height: 56px;
-  border: 1px solid var(--color-border);
+  background: var(--color-danger-light);
+  border: 1px solid var(--color-danger);
   border-radius: var(--radius-sm);
-  padding: 0 1rem;
-  font-size: var(--text-body);
+  padding: 12px;
+  text-align: center;
+  color: var(--color-danger);
+  font-weight: 500;
+  margin: 0;
 }
 
-.shake {
-  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-}
-
-@keyframes shake {
-  10%, 90% { transform: translate3d(-1px, 0, 0); }
-  20%, 80% { transform: translate3d(2px, 0, 0); }
-  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-  40%, 60% { transform: translate3d(4px, 0, 0); }
+.help-text {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  margin: 0;
 }
 </style>
