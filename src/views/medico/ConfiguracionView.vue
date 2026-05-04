@@ -75,8 +75,8 @@ const limpiarTodos = () => {
 <template>
   <div class="medico-layout">
     <AppNav>
-      <router-link to="/medico" class="nav-link">📅 Agenda de Hoy</router-link>
-      <router-link to="/medico/checklist" class="nav-link">✅ Checklist</router-link>
+      <router-link to="/medico" class="nav-link">📅 Agenda</router-link>
+      <router-link to="/medico/espera" class="nav-link">⏳ Lista de Espera</router-link>
       <router-link to="/medico/configuracion" class="nav-link">⚙️ Disponibilidad</router-link>
     </AppNav>
     

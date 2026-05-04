@@ -89,12 +89,7 @@ const router = createRouter({
       component: () => import('../views/medico/ListaEsperaView.vue'),
       meta: { requiresRole: 'medico', transition: 'slide-left' }
     },
-    {
-      path: '/medico/checklist',
-      name: 'medico-checklist',
-      component: () => import('../views/medico/ChecklistView.vue'),
-      meta: { requiresRole: 'medico', transition: 'slide-left' }
-    },
+
     {
       path: '/medico/configuracion',
       name: 'medico-configuracion',

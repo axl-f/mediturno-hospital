@@ -62,7 +62,6 @@ const manejarAccion = async (tipo: 'asistio' | 'no_asistio' | 'confirmar', citaI
     <AppNav>
       <router-link to="/medico" class="nav-link">📅 Agenda</router-link>
       <router-link to="/medico/espera" class="nav-link">⏳ Lista de Espera</router-link>
-      <router-link to="/medico/checklist" class="nav-link">✅ Checklist</router-link>
       <router-link to="/medico/configuracion" class="nav-link">⚙️ Disponibilidad</router-link>
     </AppNav>
 
@@ -114,8 +113,8 @@ const manejarAccion = async (tipo: 'asistio' | 'no_asistio' | 'confirmar', citaI
                 <button class="btn-text text-primary" @click="manejarAccion('confirmar', cita.id)">Confirmar</button>
               </div>
               <div class="cell-actions" v-else-if="cita.estado === 'confirmada'">
-                <button class="btn-icon text-success" title="Asistió" @click="manejarAccion('asistio', cita.id)">✓</button>
-                <button class="btn-icon text-danger" title="No asistió" @click="manejarAccion('no_asistio', cita.id)">✗</button>
+                <button class="btn-text text-success" @click="manejarAccion('asistio', cita.id)">✓ Asistió</button>
+                <button class="btn-text text-danger" @click="manejarAccion('no_asistio', cita.id)">✗ No Asistió</button>
               </div>
             </div>
           </div>
