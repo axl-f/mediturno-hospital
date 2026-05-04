@@ -36,7 +36,7 @@ const alertas = computed(() => {
           especialidadId: esp.id,
           mensaje: `Se detectó un ${porcentaje}% (${canceladas}) de citas canceladas para el día de hoy en ${esp.nombre}.`,
           accion: lista.length > 0 ? 'Ver lista de espera' : '',
-          ruta: '/admin/espera'
+          ruta: ''
         })
       }
     }
@@ -80,7 +80,6 @@ const irALista = (_ruta: string) => {
   <div class="admin-layout">
     <AppNav>
       <router-link to="/admin" class="nav-link">📅 Agenda</router-link>
-      <router-link to="/admin/espera" class="nav-link">⏳ Lista de Espera</router-link>
       <router-link to="/admin/alertas" class="nav-link">⚠️ Alertas</router-link>
       <router-link to="/admin/usuarios" class="nav-link">👥 Gestión Usuarios</router-link>
     </AppNav>

@@ -70,7 +70,6 @@ const eliminar = async (id: string) => {
   <div class="admin-layout">
     <AppNav>
       <router-link to="/admin" class="nav-link">📊 Dashboard</router-link>
-      <router-link to="/admin/espera" class="nav-link">⏳ Lista de Espera</router-link>
       <router-link to="/admin/alertas" class="nav-link">🔔 Alertas</router-link>
       <router-link to="/admin/usuarios" class="nav-link">👥 Gestión Usuarios</router-link>
     </AppNav>
