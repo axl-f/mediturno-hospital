@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useAgendaStore } from '../../stores/agenda'
 import { update, ref as dbRef } from 'firebase/database'
 import { db } from '../../firebase'
@@ -9,34 +9,59 @@ import CitaRow from '../../components/admin/CitaRow.vue'
 
 const agenda = useAgendaStore()
 
-// Simulamos la fecha de "hoy" (según el set de datos del prototipo: 2026-05-05)
-const fechaHoy = '2026-05-05'
+// ── Navegación de fecha ────────────────────────────────────────────────────
+const toLocalIso = (date: Date) => {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 
+const fechaSeleccionada = ref(toLocalIso(new Date()))
+
+const esPasado = computed(() => fechaSeleccionada.value < toLocalIso(new Date()))
+const esHoy    = computed(() => fechaSeleccionada.value === toLocalIso(new Date()))
+
+const cambiarDia = (delta: number) => {
+  const [y, m, d] = fechaSeleccionada.value.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  date.setDate(date.getDate() + delta)
+  fechaSeleccionada.value = toLocalIso(date)
+}
+
+const formatDate = (iso: string) => {
+  const [y, m, d] = iso.split('-')
+  const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d))
+  return date.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+// Re-suscribir citas al cambiar fecha + cargar datos de soporte
+watch(fechaSeleccionada, (nueva) => {
+  agenda.suscribirCitasDelDia(nueva)
+}, { immediate: true })
+
+agenda.cargarEspecialidades()
+agenda.suscribirListaEspera()
+
+// ── Filtros ────────────────────────────────────────────────────────────────
 const filtroEstado = ref('Todos')
 
-onMounted(() => {
-  agenda.suscribirCitasDelDia(fechaHoy)
-  agenda.cargarEspecialidades()
-  agenda.suscribirListaEspera()
-})
-
 const citasFiltradas = computed(() => {
-  if (filtroEstado.value === 'Todos') return agenda.citasDelDia
-  return agenda.citasDelDia.filter(c => c.estado === filtroEstado.value.toLowerCase())
+  const base = filtroEstado.value === 'Todos'
+    ? agenda.citasDelDia
+    : agenda.citasDelDia.filter(c => c.estado === filtroEstado.value.toLowerCase())
+  return [...base].sort((a, b) => a.hora.localeCompare(b.hora))
 })
 
-// Métricas
-const total = computed(() => agenda.citasDelDia.length)
-const confirmadas = computed(() => agenda.citasDelDia.filter(c => c.estado === 'confirmada').length)
-const canceladas = computed(() => agenda.citasDelDia.filter(c => c.estado === 'cancelada').length)
-const enEspera = computed(() => {
-  return Object.values(agenda.listaEspera).reduce((acc, curr) => acc + curr.length, 0)
-})
-const cancelacionPorcentaje = computed(() => total.value ? Math.round((canceladas.value / total.value) * 100) : 0)
+// ── Métricas ───────────────────────────────────────────────────────────────
+const total        = computed(() => agenda.citasDelDia.length)
+const confirmadas  = computed(() => agenda.citasDelDia.filter(c => c.estado === 'confirmada' || c.estado === 'asistio').length)
+const canceladas   = computed(() => agenda.citasDelDia.filter(c => c.estado === 'cancelada' || c.estado === 'no_asistio').length)
+const enEspera     = computed(() => Object.values(agenda.listaEspera).reduce((acc, curr) => acc + curr.length, 0))
+const cancelacionPct = computed(() => total.value ? Math.round((canceladas.value / total.value) * 100) : 0)
+const hayAlerta    = computed(() => cancelacionPct.value >= 20)
 
-const hayAlerta = computed(() => cancelacionPorcentaje.value > 30)
-
-const manejarAccion = async (tipo: 'asistio'|'no_asistio'|'confirmar', citaId: string) => {
+const manejarAccion = async (tipo: 'asistio' | 'no_asistio' | 'confirmar', citaId: string) => {
   const nuevoEstado = tipo === 'confirmar' ? 'confirmada' : tipo
   await update(dbRef(db, `citas/${citaId}`), { estado: nuevoEstado })
 }
@@ -49,29 +74,59 @@ const manejarAccion = async (tipo: 'asistio'|'no_asistio'|'confirmar', citaId: s
       <router-link to="/admin/alertas" class="nav-link">⚠️ Alertas</router-link>
       <router-link to="/admin/usuarios" class="nav-link">👥 Gestión Usuarios</router-link>
     </AppNav>
-    
+
     <main class="admin-content">
+
+      <!-- Encabezado + Navegador de fecha -->
       <div class="content-header">
-        <h1>Agenda del Día</h1>
-        <p class="subtitle">{{ fechaHoy }}</p>
+        <div class="header-top">
+          <h1>Agenda General</h1>
+          <div class="metrics-mini" v-if="total > 0">
+            <span class="mini-val">{{ confirmadas }}/{{ total }}</span>
+            <span class="mini-lbl">confirmadas</span>
+          </div>
+        </div>
+
+        <div class="date-nav">
+          <button class="nav-arrow" @click="cambiarDia(-1)" title="Día anterior">‹</button>
+
+          <div class="date-center">
+            <div class="date-badge" :class="{ hoy: esHoy, pasado: esPasado }">
+              {{ esHoy ? 'Hoy' : esPasado ? 'Historial' : 'Próximo' }}
+            </div>
+            <span class="fecha-texto capitalize">{{ formatDate(fechaSeleccionada) }}</span>
+            <input
+              type="date"
+              class="date-input"
+              v-model="fechaSeleccionada"
+              title="Seleccionar fecha"
+            />
+          </div>
+
+          <button class="nav-arrow" @click="cambiarDia(1)" title="Día siguiente">›</button>
+        </div>
       </div>
 
+      <!-- Métricas del día -->
       <div class="metrics-grid">
-        <MetricCard title="Total Citas" :value="total" />
-        <MetricCard title="Confirmadas" :value="confirmadas" />
-        <MetricCard title="Canceladas" :value="canceladas" :trend="`${cancelacionPorcentaje}%`" :trendUp="false" />
-        <MetricCard title="En Espera" :value="enEspera" />
+        <MetricCard title="Total Citas"  :value="total" />
+        <MetricCard title="Confirmadas"  :value="confirmadas" />
+        <MetricCard title="Canceladas / No Asistió" :value="canceladas" :trend="`${cancelacionPct}%`" :trendUp="false" />
+        <MetricCard title="Lista de Espera" :value="enEspera" />
       </div>
 
+      <!-- Banner de alerta -->
       <div v-if="hayAlerta" class="alert-banner">
-        ⚠️ Alerta: {{ cancelacionPorcentaje }}% de cancelaciones detectado. Revise la lista de espera.
+        ⚠️ Alerta: {{ cancelacionPct }}% de cancelaciones detectado. Revise la lista de espera.
       </div>
 
+      <!-- Tabla de citas -->
       <div class="table-container">
         <div class="table-header-actions">
           <div class="tabs">
-            <button 
-              v-for="t in ['Todos', 'Confirmada', 'Pendiente', 'Cancelada']" :key="t"
+            <button
+              v-for="t in ['Todos', 'Confirmada', 'Pendiente', 'Cancelada']"
+              :key="t"
               :class="['tab-btn', { active: filtroEstado === t }]"
               @click="filtroEstado = t"
             >{{ t }}</button>
@@ -83,13 +138,15 @@ const manejarAccion = async (tipo: 'asistio'|'no_asistio'|'confirmar', citaId: s
         </div>
 
         <div class="table-body">
-          <p v-if="citasFiltradas.length === 0" class="empty-msg">No hay citas para mostrar</p>
-          <CitaRow 
-            v-for="cita in citasFiltradas" 
-            :key="cita.id" 
-            :cita="cita" 
-            :esHoy="true"
-            @accion="manejarAccion" 
+          <p v-if="citasFiltradas.length === 0" class="empty-msg">
+            {{ esPasado ? 'No se registraron citas para esta fecha.' : 'No hay citas agendadas aún.' }}
+          </p>
+          <CitaRow
+            v-for="cita in citasFiltradas"
+            :key="cita.id"
+            :cita="cita"
+            :esHoy="!esPasado"
+            @accion="manejarAccion"
           />
         </div>
       </div>
@@ -111,12 +168,107 @@ const manejarAccion = async (tipo: 'asistio'|'no_asistio'|'confirmar', citaId: s
   margin: 0 auto;
 }
 
-.content-header {
-  margin-bottom: 2rem;
-}
-.content-header h1 { font-family: var(--font-display); color: var(--color-primary); margin: 0; }
-.subtitle { color: var(--color-text-secondary); font-size: 1.125rem; }
+/* Header */
+.content-header { margin-bottom: 2rem; }
 
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.content-header h1 {
+  font-family: var(--font-display);
+  color: var(--color-primary);
+  margin: 0;
+  font-size: 2rem;
+}
+
+.metrics-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: white;
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  box-shadow: var(--shadow);
+}
+.mini-val { font-size: 1.6rem; font-weight: bold; color: var(--color-primary); line-height: 1; }
+.mini-lbl { font-size: 0.75rem; color: var(--color-text-secondary); }
+
+/* Navegador de fecha */
+.date-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: white;
+  border-radius: var(--radius);
+  padding: 1rem 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.nav-arrow {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  color: var(--color-primary);
+}
+.nav-arrow:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.date-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.date-badge {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.date-badge.hoy   { background: var(--color-success-light); color: var(--color-success); }
+.date-badge.pasado { background: var(--color-bg); color: var(--color-text-secondary); }
+
+.fecha-texto {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--color-text);
+  text-align: center;
+}
+.capitalize { text-transform: capitalize; }
+
+.date-input {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  background: var(--color-bg);
+}
+
+/* Métricas */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -128,6 +280,7 @@ const manejarAccion = async (tipo: 'asistio'|'no_asistio'|'confirmar', citaId: s
   .metrics-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
+/* Alerta */
 .alert-banner {
   background: var(--color-warning-light);
   color: #a65800;
@@ -138,6 +291,7 @@ const manejarAccion = async (tipo: 'asistio'|'no_asistio'|'confirmar', citaId: s
   margin-bottom: 2rem;
 }
 
+/* Tabla */
 .table-container {
   background: white;
   border-radius: var(--radius);
@@ -164,6 +318,7 @@ const manejarAccion = async (tipo: 'asistio'|'no_asistio'|'confirmar', citaId: s
   cursor: pointer;
   font-weight: 500;
   color: var(--color-text-secondary);
+  white-space: nowrap;
 }
 .tab-btn.active {
   background: var(--color-primary);
@@ -182,14 +337,21 @@ const manejarAccion = async (tipo: 'asistio'|'no_asistio'|'confirmar', citaId: s
   gap: 1rem;
 }
 
-@media (max-width: 767px) {
-  .table-desktop-header { display: none; }
-  .table-container { background: transparent; box-shadow: none; }
-}
-
 .empty-msg {
-  padding: 2rem;
+  padding: 3rem;
   text-align: center;
   color: var(--color-text-secondary);
+  font-size: 1.05rem;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+  .admin-content { padding: 1rem 1rem 5rem; }
+  .header-top { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .date-nav { gap: 0.5rem; padding: 0.75rem 1rem; }
+  .nav-arrow { width: 36px; height: 36px; }
+  .fecha-texto { font-size: 1rem; }
+  .table-desktop-header { display: none; }
+  .table-container { background: transparent; box-shadow: none; }
 }
 </style>
