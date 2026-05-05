@@ -4,7 +4,6 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useAgendaStore } from '../../stores/agenda'
 import { useRecordatorios } from '../../composables/useRecordatorios'
-import { useWhatsApp } from '../../composables/useWhatsApp'
 import AppHeader from '../../components/layout/AppHeader.vue'
 import BigButton from '../../components/shared/BigButton.vue'
 
@@ -13,7 +12,6 @@ const route = useRoute()
 const auth = useAuthStore()
 const agenda = useAgendaStore()
 const { programarRecordatorios } = useRecordatorios()
-const { abrirRecordatorioCita } = useWhatsApp()
 
 const especialidadId = route.query.especialidad as string
 const fecha = route.query.fecha as string
@@ -42,7 +40,7 @@ onMounted(() => {
 
 const confirmar = async () => {
   if (!auth.usuario || !auth.usuario.rut) return
-
+  
   const citaData = {
     pacienteRut: auth.usuario.rut,
     pacienteNombre: auth.usuario.nombre,
@@ -50,22 +48,13 @@ const confirmar = async () => {
     fecha,
     hora
   }
-
+  
   const citaId = await agenda.crearCita(citaData)
   if (citaId) {
     programarRecordatorios({ id: citaId, ...citaData })
     numAtencion.value = citaId.slice(-6).toUpperCase()
     confirmado.value = true
   }
-}
-
-const enviarRecordatorioWA = () => {
-  abrirRecordatorioCita({
-    especialidad: especialidad.value?.nombre || especialidadId,
-    fecha,
-    hora,
-    pacienteNombre: auth.usuario?.nombre || 'Paciente',
-  })
 }
 </script>
 
@@ -115,20 +104,12 @@ const enviarRecordatorioWA = () => {
           </div>
           <h2 class="guia-text text-success">¡Cita confirmada!</h2>
           <p class="numero-atencion">Nº Atención: <strong>{{ numAtencion }}</strong></p>
-          <p class="mensaje">Guarde su cita como recordatorio en WhatsApp o vuelva al inicio.</p>
+          <p class="mensaje">Recibirá un recordatorio antes de su cita.</p>
 
-          <button class="wa-btn" @click="enviarRecordatorioWA">
-            <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.525 5.845L.057 23.535a.5.5 0 0 0 .609.609l5.702-1.463A11.944 11.944 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.805 9.805 0 0 1-5.001-1.368l-.36-.213-3.733.957.983-3.617-.235-.373A9.818 9.818 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/>
-            </svg>
-            Guardar recordatorio en WhatsApp
-          </button>
-
-          <BigButton
-            label="Volver al inicio"
-            variant="primary"
-            size="lg"
+          <BigButton 
+            label="Volver al inicio" 
+            variant="primary" 
+            size="lg" 
             @click="router.push('/paciente')"
             class="mt-4"
           />
@@ -235,37 +216,7 @@ const enviarRecordatorioWA = () => {
 }
 .mensaje {
   color: var(--color-text-secondary);
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
-.mt-4 { margin-top: 1rem; }
-
-/* Boton WhatsApp */
-.wa-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 14px 24px;
-  background: #25D366;
-  color: white;
-  border: none;
-  border-radius: 50px;
-  font-size: 1.05rem;
-  font-weight: 700;
-  cursor: pointer;
-  width: 100%;
-  max-width: 360px;
-  transition: all 0.2s;
-  box-shadow: 0 4px 16px rgba(37, 211, 102, 0.35);
-}
-.wa-btn:hover {
-  background: #1ebe5d;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(37, 211, 102, 0.45);
-}
-.wa-icon {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-}
+.mt-4 { margin-top: 2rem; }
 </style>
