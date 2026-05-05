@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterView, useRoute } from 'vue-router'
 import { computed } from 'vue'
+import ToastContainer from './components/shared/ToastContainer.vue'
 
 const route = useRoute()
 const transitionName = computed(() => (route.meta.transition as string) || 'slide-left')
@@ -12,6 +13,7 @@ const transitionName = computed(() => (route.meta.transition as string) || 'slid
       <component :is="Component" />
     </transition>
   </RouterView>
+  <ToastContainer />
 </template>
 
 <style>

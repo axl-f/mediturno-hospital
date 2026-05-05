@@ -2,11 +2,13 @@
 import { computed, onMounted } from 'vue'
 import { useAgendaStore } from '../../stores/agenda'
 import { useAuthStore } from '../../stores/auth'
+import { useToast } from '../../composables/useToast'
 import AppNav from '../../components/layout/AppNav.vue'
 import BigButton from '../../components/shared/BigButton.vue'
 
 const agenda = useAgendaStore()
 const auth = useAuthStore()
+const toast = useToast()
 
 const especialidadActual = computed(() => auth.usuario?.especialidad || '')
 
@@ -21,7 +23,7 @@ onMounted(() => {
 const notificar = async (paciente: any) => {
   if (!paciente.id) return
   await agenda.notificarPaciente(especialidadActual.value, paciente.id)
-  alert(`Se ha enviado una notificación a ${paciente.nombre} para la fecha ${paciente.fechaEsperada || 'solicitada'}`)
+  toast.success(`Notificación enviada a ${paciente.nombre} correctamente.`)
 }
 </script>
 

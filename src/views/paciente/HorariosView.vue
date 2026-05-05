@@ -7,11 +7,13 @@ import AppHeader from '../../components/layout/AppHeader.vue'
 import HorarioBloque from '../../components/paciente/HorarioBloque.vue'
 import BigButton from '../../components/shared/BigButton.vue'
 import LoadingSpinner from '../../components/shared/LoadingSpinner.vue'
+import { useToast } from '../../composables/useToast'
 
 const router = useRouter()
 const route = useRoute()
 const agenda = useAgendaStore()
 const auth = useAuthStore()
+const toast = useToast()
 
 const especialidadId = route.params.especialidad as string
 const fecha = route.params.fecha as string
@@ -60,10 +62,10 @@ const unirseListaEspera = async () => {
   anotando.value = true
   try {
     await agenda.unirseListaEspera(especialidadId, auth.usuario.rut, auth.usuario.nombre, fecha)
-    alert('Se ha anotado exitosamente en la lista de espera para esta fecha.')
-    router.push('/paciente/mis-citas')
+    toast.success('Se ha anotado exitosamente en la lista de espera para esta fecha.')
+    setTimeout(() => router.push('/paciente'), 1500)
   } catch(e) {
-    alert('Hubo un error al anotarse en la lista de espera.')
+    toast.error('Hubo un error al anotarse en la lista de espera. Inténtelo de nuevo.')
   } finally {
     anotando.value = false
   }

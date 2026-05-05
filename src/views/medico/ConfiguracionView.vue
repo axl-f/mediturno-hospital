@@ -3,11 +3,13 @@ import { ref } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { db } from '../../firebase'
 import { ref as dbRef, update } from 'firebase/database'
+import { useToast } from '../../composables/useToast'
 import AppNav from '../../components/layout/AppNav.vue'
 import BigButton from '../../components/shared/BigButton.vue'
 import LoadingSpinner from '../../components/shared/LoadingSpinner.vue'
 
 const auth = useAuthStore()
+const toast = useToast()
 
 // Get tomorrow as min date
 const minDate = new Date()
@@ -57,7 +59,7 @@ const guardarDisponibilidad = async () => {
     setTimeout(() => mensajeExito.value = '', 3000)
   } catch (err) {
     console.error(err)
-    alert('Error al guardar horarios')
+    toast.error('Error al guardar horarios. Inténtelo de nuevo.')
   } finally {
     guardando.value = false
   }

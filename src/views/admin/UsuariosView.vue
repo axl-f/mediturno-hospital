@@ -6,9 +6,11 @@ import { useAgendaStore } from '../../stores/agenda'
 import AppNav from '../../components/layout/AppNav.vue'
 import BigButton from '../../components/shared/BigButton.vue'
 import LoadingSpinner from '../../components/shared/LoadingSpinner.vue'
+import { useToast } from '../../composables/useToast'
 
 const admin = useAdminStore()
 const agenda = useAgendaStore()
+const toast = useToast()
 
 onMounted(() => {
   admin.suscribirPacientes()
@@ -45,14 +47,21 @@ const abrirModalEditar = (item: any) => {
 
 const guardar = async () => {
   if (tabActual.value === 'pacientes') {
-    if (!formPaciente.value.rut || !formPaciente.value.nombre) return alert('Rut y Nombre son obligatorios')
+    if (!formPaciente.value.rut || !formPaciente.value.nombre) {
+      toast.warning('RUT y Nombre son obligatorios')
+      return
+    }
     await admin.guardarPaciente(formPaciente.value.rut, { nombre: formPaciente.value.nombre, edad: formPaciente.value.edad })
   } else {
-    if (!formMedico.value.user || !formMedico.value.nombre || !formMedico.value.especialidad) return alert('Usuario, Nombre y Especialidad son obligatorios')
+    if (!formMedico.value.user || !formMedico.value.nombre || !formMedico.value.especialidad) {
+      toast.warning('Usuario, Nombre y Especialidad son obligatorios')
+      return
+    }
     const datosMedico: any = { nombre: formMedico.value.nombre, especialidad: formMedico.value.especialidad }
     if (formMedico.value.password) datosMedico.password = formMedico.value.password
     await admin.guardarMedico(formMedico.value.user, datosMedico)
   }
+  toast.success(modoEdicion.value ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente')
   modalAbierto.value = false
 }
 
