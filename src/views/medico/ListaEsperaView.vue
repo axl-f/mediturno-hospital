@@ -2,11 +2,13 @@
 import { computed, onMounted } from 'vue'
 import { useAgendaStore } from '../../stores/agenda'
 import { useAuthStore } from '../../stores/auth'
+import { useWhatsApp } from '../../composables/useWhatsApp'
 import AppNav from '../../components/layout/AppNav.vue'
 import BigButton from '../../components/shared/BigButton.vue'
 
 const agenda = useAgendaStore()
 const auth = useAuthStore()
+const { abrirNotificacionEspera } = useWhatsApp()
 
 const especialidadActual = computed(() => auth.usuario?.especialidad || '')
 
@@ -20,8 +22,13 @@ onMounted(() => {
 
 const notificar = async (paciente: any) => {
   if (!paciente.id) return
+  // 1. Marcar como notificado en Firebase
   await agenda.notificarPaciente(especialidadActual.value, paciente.id)
-  alert(`Se ha enviado una notificación a ${paciente.nombre} para la fecha ${paciente.fechaEsperada || 'solicitada'}`)
+  // 2. Abrir WhatsApp con mensaje pre-redactado para el médico/recepcionista
+  abrirNotificacionEspera(
+    { nombre: paciente.nombre, numeroPaciente: paciente.telefono },
+    especialidadActual.value.replace(/_/g, ' ')
+  )
 }
 </script>
 
@@ -59,13 +66,14 @@ const notificar = async (paciente: any) => {
             <div class="cell-time">{{ p.fechaEsperada || 'Cualquiera' }}</div>
             <div class="cell-actions">
               <span v-if="p.notificado" class="badge-notificado">Notificado ✓</span>
-              <BigButton 
-                v-else
-                label="Notificar" 
-                variant="primary"
-                size="md"
-                @click="notificar(p)"
-              />
+              <div v-else class="action-btns">
+                <BigButton
+                  label="Notificar en sistema"
+                  variant="primary"
+                  size="md"
+                  @click="notificar(p)"
+                />
+              </div>
             </div>
           </div>
         </div>
