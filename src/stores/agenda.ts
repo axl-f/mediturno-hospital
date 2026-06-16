@@ -29,12 +29,25 @@ export interface PacienteEspera {
   fechaEsperada?: string
 }
 
+export interface OfertaReasignacion {
+  id: string
+  especialidad: string
+  especialidadNombre: string
+  fecha: string
+  hora: string
+  pacienteRut: string
+  creadaEn: number
+  expiraEn: number
+  estado: 'pendiente' | 'aceptada' | 'expirada' | 'rechazada'
+}
+
 export const useAgendaStore = defineStore('agenda', () => {
   const especialidades = ref<Especialidad[]>([])
   const disponibilidad = ref<Record<string, Record<string, string[]>>>({})
   const fechasDisponibles = ref<string[]>([])
   const citasDelDia = ref<Cita[]>([])
   const listaEspera = ref<Record<string, PacienteEspera[]>>({})
+  const ofertasActivas = ref<OfertaReasignacion[]>([])
   const cargando = ref(false)
 
   async function cargarEspecialidades() {
@@ -121,7 +134,8 @@ export const useAgendaStore = defineStore('agenda', () => {
     updates[`citas/${citaId}/estado`] = 'cancelada'
     updates[`agenda/${cita.especialidad}/${cita.fecha}/${cita.hora}`] = null
     await update(dbRef(db), updates)
-    // Acá iría la lógica para activar lista de espera
+    // Reasignación automática: ofrecer cupo al siguiente en lista de espera
+    await crearOfertaReasignacion(cita.especialidad, cita.fecha, cita.hora)
   }
 
   function suscribirCitasDelDia(fecha: string) {
@@ -200,12 +214,156 @@ export const useAgendaStore = defineStore('agenda', () => {
     }
   }
 
+  // ── Reasignación Dinámica ──────────────────────────────────────────
+  const DURACION_OFERTA_MS = 15 * 60 * 1000 // 15 minutos
+
+  async function crearOfertaReasignacion(especialidadId: string, fecha: string, hora: string) {
+    const queue = listaEspera.value[especialidadId]
+    if (!queue || queue.length === 0) return
+
+    // Ordenar por antigüedad y obtener el primero no notificado aún con oferta
+    const candidatos = [...queue].sort((a, b) => a.timestamp - b.timestamp)
+    const candidato = candidatos[0]
+    if (!candidato) return
+
+    const espNombre = especialidades.value.find(e => e.id === especialidadId)?.nombre || especialidadId
+
+    const ofertaRef = push(dbRef(db, 'ofertas'))
+    const ahora = Date.now()
+    const oferta: Omit<OfertaReasignacion, 'id'> = {
+      especialidad: especialidadId,
+      especialidadNombre: espNombre,
+      fecha,
+      hora,
+      pacienteRut: candidato.rut,
+      creadaEn: ahora,
+      expiraEn: ahora + DURACION_OFERTA_MS,
+      estado: 'pendiente',
+    }
+
+    await update(dbRef(db), {
+      [`ofertas/${ofertaRef.key}`]: { id: ofertaRef.key, ...oferta },
+    })
+  }
+
+  async function aceptarOferta(ofertaId: string) {
+    // Leer la oferta
+    const snap = await get(dbRef(db, `ofertas/${ofertaId}`))
+    if (!snap.exists()) return
+    const oferta = snap.val() as OfertaReasignacion
+
+    if (oferta.estado !== 'pendiente') return
+
+    // Crear la cita
+    const citasRef = push(dbRef(db, 'citas'))
+    const nuevaCita = {
+      id: citasRef.key,
+      pacienteRut: oferta.pacienteRut,
+      pacienteNombre: '', // Se llena abajo
+      especialidad: oferta.especialidad,
+      fecha: oferta.fecha,
+      hora: oferta.hora,
+      estado: 'pendiente',
+    }
+
+    // Obtener nombre del paciente
+    const pacSnap = await get(dbRef(db, `pacientes/${oferta.pacienteRut}`))
+    if (pacSnap.exists()) {
+      nuevaCita.pacienteNombre = pacSnap.val().nombre || ''
+    }
+
+    const updates: any = {}
+    updates[`citas/${citasRef.key}`] = nuevaCita
+    updates[`agenda/${oferta.especialidad}/${oferta.fecha}/${oferta.hora}`] = citasRef.key
+    updates[`ofertas/${ofertaId}/estado`] = 'aceptada'
+    await update(dbRef(db), updates)
+
+    // Remover de lista de espera
+    await removerPacienteDeEsperaPorRut(oferta.especialidad, oferta.pacienteRut)
+  }
+
+  async function rechazarOferta(ofertaId: string) {
+    const snap = await get(dbRef(db, `ofertas/${ofertaId}`))
+    if (!snap.exists()) return
+    const oferta = snap.val() as OfertaReasignacion
+
+    await update(dbRef(db), {
+      [`ofertas/${ofertaId}/estado`]: 'rechazada',
+    })
+
+    // Buscar siguiente candidato en la lista de espera
+    const queue = listaEspera.value[oferta.especialidad]
+    if (queue && queue.length > 0) {
+      const siguientes = [...queue]
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .filter(p => p.rut !== oferta.pacienteRut)
+      if (siguientes.length > 0) {
+        await crearOfertaParaCandidato(oferta.especialidad, oferta.fecha, oferta.hora, siguientes[0])
+      }
+    }
+  }
+
+  async function crearOfertaParaCandidato(especialidadId: string, fecha: string, hora: string, candidato: PacienteEspera) {
+    const espNombre = especialidades.value.find(e => e.id === especialidadId)?.nombre || especialidadId
+    const ofertaRef = push(dbRef(db, 'ofertas'))
+    const ahora = Date.now()
+    await update(dbRef(db), {
+      [`ofertas/${ofertaRef.key}`]: {
+        id: ofertaRef.key,
+        especialidad: especialidadId,
+        especialidadNombre: espNombre,
+        fecha,
+        hora,
+        pacienteRut: candidato.rut,
+        creadaEn: ahora,
+        expiraEn: ahora + DURACION_OFERTA_MS,
+        estado: 'pendiente',
+      },
+    })
+  }
+
+  function suscribirOfertas(rut: string) {
+    const ofertasRef = dbRef(db, 'ofertas')
+    onValue(ofertasRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val()
+        ofertasActivas.value = Object.values(data)
+          .filter((o: any) => o.pacienteRut === rut && o.estado === 'pendiente')
+          .map((o: any) => o as OfertaReasignacion)
+      } else {
+        ofertasActivas.value = []
+      }
+    })
+  }
+
+  async function verificarExpiraciones() {
+    const ahora = Date.now()
+    for (const oferta of ofertasActivas.value) {
+      if (oferta.estado === 'pendiente' && ahora >= oferta.expiraEn) {
+        await update(dbRef(db), {
+          [`ofertas/${oferta.id}/estado`]: 'expirada',
+        })
+        // Escalar al siguiente candidato
+        const queue = listaEspera.value[oferta.especialidad]
+        if (queue && queue.length > 0) {
+          const siguientes = [...queue]
+            .sort((a, b) => a.timestamp - b.timestamp)
+            .filter(p => p.rut !== oferta.pacienteRut)
+          if (siguientes.length > 0) {
+            await crearOfertaParaCandidato(oferta.especialidad, oferta.fecha, oferta.hora, siguientes[0])
+          }
+        }
+      }
+    }
+  }
+
   return {
     especialidades,
     disponibilidad,
     fechasDisponibles,
     citasDelDia,
     listaEspera,
+    ofertasActivas,
     cargando,
     cargarEspecialidades,
     cargarFechasDisponibles,
@@ -217,6 +375,11 @@ export const useAgendaStore = defineStore('agenda', () => {
     unirseListaEspera,
     removerDeListaEspera,
     agregarListaEspera,
-    notificarPaciente
+    notificarPaciente,
+    crearOfertaReasignacion,
+    aceptarOferta,
+    rechazarOferta,
+    suscribirOfertas,
+    verificarExpiraciones,
   }
 })
