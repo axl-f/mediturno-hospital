@@ -186,9 +186,9 @@ defineExpose({ iniciar: chat.iniciar })
               v-if="chat.soportaReconocimiento.value"
               class="mic-btn"
               :class="{ active: chat.escuchando.value }"
-              @click="chat.activarMicrofono()"
-              :disabled="chat.escuchando.value || chat.paso.value === 'completado'"
-              aria-label="Activar micrófono"
+              @click="chat.toggleMicrofono()"
+              :disabled="chat.paso.value === 'completado'"
+              :aria-label="chat.escuchando.value ? 'Desactivar micrófono' : 'Activar micrófono'"
             >
               <svg v-if="!chat.escuchando.value" width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <rect x="7" y="2" width="6" height="10" rx="3" fill="currentColor"/>

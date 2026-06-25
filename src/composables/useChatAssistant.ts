@@ -32,6 +32,7 @@ export function useChatAssistant() {
   const paso = ref<PasoChat>('inicio')
   const abierto = ref(false)
   const escuchando = ref(false)
+  let recognitionInstance: any = null
   const especialidadElegida = ref<any>(null)
   const resultadoCita = ref<{ fecha: string; hora: string; especialidad: string } | null>(null)
 
@@ -49,37 +50,49 @@ export function useChatAssistant() {
     window.speechSynthesis.speak(u)
   }
 
-  function escucharVoz(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      if (!soportaReconocimiento.value) {
-        reject(new Error('Reconocimiento de voz no soportado'))
-        return
+  function iniciarReconocimiento() {
+    if (!soportaReconocimiento.value) return
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'es-CL'
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+    recognition.continuous = false
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript.toLowerCase().trim()
+      if (transcript) {
+        procesarRespuesta(transcript)
       }
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-      const recognition = new SpeechRecognition()
-      recognition.lang = 'es-CL'
-      recognition.interimResults = false
-      recognition.maxAlternatives = 1
+    }
 
-      escuchando.value = true
-
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript.toLowerCase().trim()
-        escuchando.value = false
-        resolve(transcript)
+    recognition.onerror = () => {
+      // Si sigue activo, reiniciar tras error
+      if (escuchando.value) {
+        setTimeout(() => {
+          if (escuchando.value) iniciarReconocimiento()
+        }, 300)
       }
+    }
 
-      recognition.onerror = () => {
-        escuchando.value = false
-        reject(new Error('No se pudo reconocer'))
+    recognition.onend = () => {
+      // Auto-reiniciar si el mic sigue encendido (escucha continua)
+      if (escuchando.value) {
+        setTimeout(() => {
+          if (escuchando.value) iniciarReconocimiento()
+        }, 200)
       }
+    }
 
-      recognition.onend = () => {
-        escuchando.value = false
-      }
+    recognitionInstance = recognition
+    recognition.start()
+  }
 
-      recognition.start()
-    })
+  function detenerReconocimiento() {
+    if (recognitionInstance) {
+      try { recognitionInstance.abort() } catch { /* ignore */ }
+      recognitionInstance = null
+    }
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────
@@ -117,6 +130,7 @@ export function useChatAssistant() {
     abierto.value = false
     window.speechSynthesis.cancel()
     escuchando.value = false
+    detenerReconocimiento()
   }
 
   async function procesarRespuesta(input: string) {
@@ -327,15 +341,16 @@ export function useChatAssistant() {
     }
   }
 
-  // ── Activar micrófono ───────────────────────────────────────────────
-  async function activarMicrofono() {
-    try {
-      const resultado = await escucharVoz()
-      if (resultado) {
-        await procesarRespuesta(resultado)
-      }
-    } catch {
-      agregarMensaje('asistente', 'No pude escuchar. Intente de nuevo o use los botones.')
+  // ── Toggle micrófono (activar/desactivar) ───────────────────────────
+  function toggleMicrofono() {
+    if (escuchando.value) {
+      // Desactivar
+      escuchando.value = false
+      detenerReconocimiento()
+    } else {
+      // Activar
+      escuchando.value = true
+      iniciarReconocimiento()
     }
   }
 
@@ -349,6 +364,6 @@ export function useChatAssistant() {
     iniciar,
     cerrar,
     procesarRespuesta,
-    activarMicrofono,
+    toggleMicrofono,
   }
 }
